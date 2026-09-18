@@ -1,0 +1,786 @@
+from flask import Flask, render_template, jsonify
+import json
+from pathlib import Path
+from collections import Counter
+
+
+# =========================================
+# HAWK WAF DASHBOARD
+# =========================================
+
+app = Flask(__name__)
+
+
+# =========================================
+# FILE PATHS
+# =========================================
+
+LOG_FILE = Path(
+    "logs/waf_events.json"
+)
+
+CONFIG_FILE = Path(
+    "config.json"
+)
+
+RULES_FILE = Path(
+    "rules/rules.json"
+)
+
+
+# =========================================
+# LOAD EVENTS
+# =========================================
+
+def load_events():
+
+    events = []
+
+    if not LOG_FILE.exists():
+
+        return events
+
+    try:
+
+        with open(
+            LOG_FILE,
+            "r",
+            encoding="utf-8"
+        ) as file:
+
+            for line in file:
+
+                line = line.strip()
+
+                if not line:
+
+                    continue
+
+                try:
+
+                    events.append(
+                        json.loads(line)
+                    )
+
+                except json.JSONDecodeError:
+
+                    continue
+
+    except OSError:
+
+        pass
+
+    return events
+
+
+# =========================================
+# LOAD CONFIGURATION
+# =========================================
+
+def load_config():
+
+    if not CONFIG_FILE.exists():
+
+        return {}
+
+    try:
+
+        with open(
+            CONFIG_FILE,
+            "r",
+            encoding="utf-8"
+        ) as file:
+
+            return json.load(file)
+
+    except (
+        OSError,
+        json.JSONDecodeError
+    ):
+
+        return {}
+
+
+# =========================================
+# LOAD RULES
+# =========================================
+
+def load_rules():
+
+    if not RULES_FILE.exists():
+
+        return {}
+
+    try:
+
+        with open(
+            RULES_FILE,
+            "r",
+            encoding="utf-8"
+        ) as file:
+
+            return json.load(file)
+
+    except (
+        OSError,
+        json.JSONDecodeError
+    ):
+
+        return {}
+
+
+# =========================================
+# DASHBOARD
+# =========================================
+
+@app.route("/")
+def dashboard():
+
+    return render_template(
+        "dashboard.html"
+    )
+
+
+# =========================================
+# STATISTICS API
+# =========================================
+
+@app.route("/api/stats")
+def stats():
+
+    events = load_events()
+
+    total = len(events)
+
+
+    # -------------------------------------
+    # ALLOWED
+    # -------------------------------------
+
+    allowed = sum(
+
+        1
+
+        for event in events
+
+        if event.get(
+            "action"
+        ) == "ALLOW"
+
+    )
+
+
+    # -------------------------------------
+    # WAF BLOCKED
+    # -------------------------------------
+
+    blocked = sum(
+
+        1
+
+        for event in events
+
+        if event.get(
+            "action"
+        ) == "BLOCK"
+
+        and event.get(
+            "rule"
+        ) != "RATE_LIMIT"
+
+    )
+
+
+    # -------------------------------------
+    # RATE LIMITED
+    # -------------------------------------
+
+    rate_limited = sum(
+
+        1
+
+        for event in events
+
+        if event.get(
+            "rule"
+        ) == "RATE_LIMIT"
+
+    )
+
+
+    # -------------------------------------
+    # ERRORS
+    # -------------------------------------
+
+    errors = sum(
+
+        1
+
+        for event in events
+
+        if event.get(
+            "action"
+        ) == "ERROR"
+
+    )
+
+
+    # -------------------------------------
+    # SEVERITY
+    # -------------------------------------
+
+    high = sum(
+
+        1
+
+        for event in events
+
+        if event.get(
+            "severity"
+        ) == "HIGH"
+
+    )
+
+
+    medium = sum(
+
+        1
+
+        for event in events
+
+        if event.get(
+            "severity"
+        ) == "MEDIUM"
+
+    )
+
+
+    low = sum(
+
+        1
+
+        for event in events
+
+        if event.get(
+            "severity"
+        ) == "LOW"
+
+    )
+
+
+    # -------------------------------------
+    # ATTACK TYPES
+    # -------------------------------------
+
+    rules = Counter(
+
+        event.get(
+            "rule"
+        )
+
+        for event in events
+
+        if event.get(
+            "rule"
+        )
+
+        and event.get(
+            "rule"
+        ) != "RATE_LIMIT"
+
+        and event.get(
+            "rule"
+        ) != "BACKEND_ERROR"
+
+    )
+
+
+    # -------------------------------------
+    # HTTP METHODS
+    # -------------------------------------
+
+    methods = Counter(
+
+        event.get(
+            "method"
+        )
+
+        for event in events
+
+        if event.get(
+            "method"
+        )
+
+    )
+
+
+    # -------------------------------------
+    # SOURCE IPs
+    # -------------------------------------
+
+    source_ips = Counter(
+
+        event.get(
+            "source_ip"
+        )
+
+        for event in events
+
+        if event.get(
+            "source_ip"
+        )
+
+    )
+
+
+    # -------------------------------------
+    # STATUS CODES
+    # -------------------------------------
+
+    status_codes = Counter(
+
+        str(
+            event.get(
+                "status_code"
+            )
+        )
+
+        for event in events
+
+        if event.get(
+            "status_code"
+        ) is not None
+
+    )
+
+
+    return jsonify({
+
+        "total":
+            total,
+
+        "allowed":
+            allowed,
+
+        "blocked":
+            blocked,
+
+        "rate_limited":
+            rate_limited,
+
+        "errors":
+            errors,
+
+        "high":
+            high,
+
+        "medium":
+            medium,
+
+        "low":
+            low,
+
+        "attack_types":
+            dict(rules),
+
+        "methods":
+            dict(methods),
+
+        "source_ips":
+            dict(source_ips),
+
+        "status_codes":
+            dict(status_codes)
+
+    })
+
+
+# =========================================
+# SECURITY EVENTS API
+# =========================================
+
+@app.route("/api/events")
+def events():
+
+    all_events = load_events()
+
+
+    recent_events = list(
+
+        reversed(
+
+            all_events[-50:]
+
+        )
+
+    )
+
+
+    return jsonify({
+
+        "events":
+            recent_events
+
+    })
+
+
+# =========================================
+# CONFIGURATION API
+# =========================================
+
+@app.route("/api/config")
+def config():
+
+    configuration = load_config()
+
+
+    # -------------------------------------
+    # WAF
+    # -------------------------------------
+
+    waf_config = (
+
+        configuration.get(
+            "waf",
+            {}
+        )
+
+    )
+
+
+    # -------------------------------------
+    # BACKEND
+    # -------------------------------------
+
+    backend_config = (
+
+        configuration.get(
+            "backend",
+            {}
+        )
+
+    )
+
+
+    # -------------------------------------
+    # DASHBOARD
+    # -------------------------------------
+
+    dashboard_config = (
+
+        configuration.get(
+            "dashboard",
+            {}
+        )
+
+    )
+
+
+    # -------------------------------------
+    # RATE LIMIT
+    # -------------------------------------
+
+    rate_config = (
+
+        configuration.get(
+            "rate_limit",
+            {}
+        )
+
+    )
+
+
+    return jsonify({
+
+        "name":
+
+            waf_config.get(
+                "name",
+                "HAWK WAF"
+            ),
+
+
+        "waf_host":
+
+            waf_config.get(
+                "host",
+                "127.0.0.1"
+            ),
+
+
+        "waf_port":
+
+            waf_config.get(
+                "port",
+                8080
+            ),
+
+
+        "backend_host":
+
+            backend_config.get(
+                "host",
+                "127.0.0.1"
+            ),
+
+
+        "backend_port":
+
+            backend_config.get(
+                "port",
+                5001
+            ),
+
+
+        "dashboard_host":
+
+            dashboard_config.get(
+                "host",
+                "127.0.0.1"
+            ),
+
+
+        "dashboard_port":
+
+            dashboard_config.get(
+                "port",
+                9000
+            ),
+
+
+        "rate_limit_enabled":
+
+            rate_config.get(
+                "enabled",
+                True
+            ),
+
+
+        "max_requests":
+
+            rate_config.get(
+                "max_requests",
+                20
+            ),
+
+
+        "window_seconds":
+
+            rate_config.get(
+                "window_seconds",
+                10
+            )
+
+    })
+
+
+# =========================================
+# RULE MANAGEMENT API
+# =========================================
+
+@app.route("/api/rules")
+def rules():
+
+    # -------------------------------------
+    # CHECK FILE
+    # -------------------------------------
+
+    if not RULES_FILE.exists():
+
+        return jsonify({
+
+            "error":
+                "Rules file not found",
+
+            "total_rules":
+                0,
+
+            "rules":
+                []
+
+        }), 404
+
+
+    # -------------------------------------
+    # LOAD RULES
+    # -------------------------------------
+
+    try:
+
+        with open(
+            RULES_FILE,
+            "r",
+            encoding="utf-8"
+        ) as file:
+
+            rules_data = json.load(
+                file
+            )
+
+
+    except json.JSONDecodeError as error:
+
+        return jsonify({
+
+            "error":
+                f"Invalid rules JSON: {error}",
+
+            "total_rules":
+                0,
+
+            "rules":
+                []
+
+        }), 500
+
+
+    except OSError as error:
+
+        return jsonify({
+
+            "error":
+                f"Unable to read rules: {error}",
+
+            "total_rules":
+                0,
+
+            "rules":
+                []
+
+        }), 500
+
+
+    # -------------------------------------
+    # BUILD RULE RESPONSE
+    # -------------------------------------
+
+    output = []
+
+
+    for rule_name, rule_config in (
+        rules_data.items()
+    ):
+
+        patterns = (
+
+            rule_config.get(
+                "patterns",
+                []
+            )
+
+        )
+
+
+        output.append({
+
+            "name":
+
+                rule_name,
+
+
+            "enabled":
+
+                rule_config.get(
+                    "enabled",
+                    True
+                ),
+
+
+            "severity":
+
+                rule_config.get(
+                    "severity",
+                    "HIGH"
+                ),
+
+
+            "pattern_count":
+
+                len(
+                    patterns
+                ),
+
+
+            "patterns":
+
+                patterns
+
+        })
+
+
+    # -------------------------------------
+    # RETURN RULES
+    # -------------------------------------
+
+    return jsonify({
+
+        "total_rules":
+            len(output),
+
+        "rules":
+            output
+
+    })
+
+
+# =========================================
+# START DASHBOARD
+# =========================================
+
+if __name__ == "__main__":
+
+    print()
+
+    print("=" * 60)
+
+    print(
+        "                  HAWK WAF Dashboard"
+    )
+
+    print(
+        "             Security Monitoring Center"
+    )
+
+    print("=" * 60)
+
+    print()
+
+    print(
+        "Dashboard : "
+        "http://127.0.0.1:9000"
+    )
+
+    print(
+        "Stats     : "
+        "http://127.0.0.1:9000/api/stats"
+    )
+
+    print(
+        "Events    : "
+        "http://127.0.0.1:9000/api/events"
+    )
+
+    print(
+        "Config    : "
+        "http://127.0.0.1:9000/api/config"
+    )
+
+    print(
+        "Rules     : "
+        "http://127.0.0.1:9000/api/rules"
+    )
+
+    print()
+
+    print("=" * 60)
+
+
+    app.run(
+
+        host="127.0.0.1",
+
+        port=9000,
+
+        debug=False
+
+    )

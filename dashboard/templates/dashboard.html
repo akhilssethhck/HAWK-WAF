@@ -1,0 +1,2243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>HAWK WAF - Security Dashboard</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+
+            background:
+                radial-gradient(
+                    circle at top right,
+                    #241010 0%,
+                    #0b0b0b 40%,
+                    #050505 100%
+                );
+
+            color: #eeeeee;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            min-height: 100vh;
+
+        }
+
+        header {
+
+            padding: 25px 35px;
+
+            border-bottom:
+                1px solid #2b2b2b;
+
+            background:
+                rgba(10, 10, 10, 0.95);
+
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: center;
+
+            position: sticky;
+
+            top: 0;
+
+            z-index: 100;
+
+            backdrop-filter: blur(10px);
+
+        }
+
+        .brand {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 15px;
+
+        }
+
+        .logo {
+
+            width: 48px;
+
+            height: 48px;
+
+            border-radius: 10px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #ff2222,
+                    #7a0000
+                );
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            font-size: 25px;
+
+            font-weight: bold;
+
+            box-shadow:
+                0 0 20px
+                rgba(255, 0, 0, 0.25);
+
+        }
+
+        .brand h1 {
+
+            font-size: 25px;
+
+            letter-spacing: 2px;
+
+        }
+
+        .brand span {
+
+            color: #ff3333;
+
+        }
+
+        .status {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 8px;
+
+            color: #999;
+
+            font-size: 13px;
+
+        }
+
+        .status-dot {
+
+            width: 9px;
+
+            height: 9px;
+
+            background: #33dd77;
+
+            border-radius: 50%;
+
+            box-shadow:
+                0 0 10px
+                rgba(51, 221, 119, 0.8);
+
+        }
+
+        main {
+
+            max-width: 1500px;
+
+            margin: auto;
+
+            padding: 30px;
+
+        }
+
+        .page-title {
+
+            margin-bottom: 25px;
+
+        }
+
+        .page-title h2 {
+
+            font-size: 28px;
+
+            margin-bottom: 8px;
+
+        }
+
+        .page-title p {
+
+            color: #888;
+
+            font-size: 14px;
+
+        }
+
+        .cards {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(
+                    5,
+                    minmax(150px, 1fr)
+                );
+
+            gap: 18px;
+
+            margin-bottom: 25px;
+
+        }
+
+        .card {
+
+            background:
+                linear-gradient(
+                    145deg,
+                    #171717,
+                    #0f0f0f
+                );
+
+            border:
+                1px solid #292929;
+
+            border-radius: 12px;
+
+            padding: 22px;
+
+            position: relative;
+
+            overflow: hidden;
+
+            transition: 0.2s;
+
+        }
+
+        .card:hover {
+
+            transform: translateY(-2px);
+
+            border-color: #444;
+
+        }
+
+        .card::before {
+
+            content: "";
+
+            position: absolute;
+
+            left: 0;
+
+            top: 0;
+
+            width: 100%;
+
+            height: 3px;
+
+            background: #333;
+
+        }
+
+        .card.total::before {
+
+            background: #777;
+
+        }
+
+        .card.allowed::before {
+
+            background: #33cc77;
+
+        }
+
+        .card.blocked::before {
+
+            background: #ff3333;
+
+        }
+
+        .card.rate::before {
+
+            background: #ffaa33;
+
+        }
+
+        .card.error::before {
+
+            background: #cc55ff;
+
+        }
+
+        .card-label {
+
+            color: #888;
+
+            font-size: 13px;
+
+            text-transform: uppercase;
+
+            letter-spacing: 1px;
+
+        }
+
+        .card-value {
+
+            font-size: 32px;
+
+            font-weight: bold;
+
+            margin-top: 12px;
+
+        }
+
+        .allowed .card-value {
+
+            color: #33dd77;
+
+        }
+
+        .blocked .card-value {
+
+            color: #ff4444;
+
+        }
+
+        .rate .card-value {
+
+            color: #ffaa33;
+
+        }
+
+        .error .card-value {
+
+            color: #cc66ff;
+
+        }
+
+        .grid {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(
+                    2,
+                    minmax(0, 1fr)
+                );
+
+            gap: 20px;
+
+            margin-bottom: 20px;
+
+        }
+
+        .panel {
+
+            background: #101010;
+
+            border:
+                1px solid #282828;
+
+            border-radius: 12px;
+
+            padding: 22px;
+
+        }
+
+        .panel h3 {
+
+            font-size: 16px;
+
+            margin-bottom: 20px;
+
+            color: #ddd;
+
+            letter-spacing: 0.5px;
+
+        }
+
+        /* =========================
+           CONFIGURATION
+        ========================= */
+
+        .config-grid {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(
+                    2,
+                    1fr
+                );
+
+            gap: 12px;
+
+        }
+
+        .config-item {
+
+            background: #171717;
+
+            border:
+                1px solid #292929;
+
+            border-radius: 8px;
+
+            padding: 16px;
+
+        }
+
+        .config-label {
+
+            color: #777;
+
+            font-size: 11px;
+
+            text-transform: uppercase;
+
+            letter-spacing: 0.8px;
+
+            margin-bottom: 7px;
+
+        }
+
+        .config-value {
+
+            color: #eeeeee;
+
+            font-size: 16px;
+
+            font-weight: bold;
+
+            word-break: break-word;
+
+        }
+
+        .config-active {
+
+            color: #33dd77;
+
+        }
+
+        .config-disabled {
+
+            color: #ff4444;
+
+        }
+
+        .severity-grid {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(4, 1fr);
+
+            gap: 12px;
+
+        }
+
+        .severity-box {
+
+            background: #171717;
+
+            border:
+                1px solid #292929;
+
+            border-radius: 8px;
+
+            padding: 18px;
+
+        }
+
+        .severity-name {
+
+            font-size: 12px;
+
+            color: #888;
+
+            text-transform: uppercase;
+
+        }
+
+        .severity-value {
+
+            font-size: 25px;
+
+            font-weight: bold;
+
+            margin-top: 8px;
+
+        }
+
+        .high {
+
+            color: #ff3333;
+
+        }
+
+        .medium {
+
+            color: #ffaa33;
+
+        }
+
+        .low {
+
+            color: #44bbff;
+
+        }
+
+        .ips {
+
+            color: #bb77ff;
+
+        }
+
+        .attack-list {
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 12px;
+
+        }
+
+        .attack-row {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 12px;
+
+        }
+
+        .attack-name {
+
+            width: 190px;
+
+            font-size: 13px;
+
+            color: #bbb;
+
+        }
+
+        .attack-bar-container {
+
+            flex: 1;
+
+            height: 9px;
+
+            background: #242424;
+
+            border-radius: 20px;
+
+            overflow: hidden;
+
+        }
+
+        .attack-bar {
+
+            height: 100%;
+
+            background:
+                linear-gradient(
+                    90deg,
+                    #770000,
+                    #ff3333
+                );
+
+            border-radius: 20px;
+
+            transition: width 0.4s;
+
+        }
+
+        .attack-count {
+
+            width: 40px;
+
+            text-align: right;
+
+            font-weight: bold;
+
+            color: #eee;
+
+        }
+
+        .status-list {
+
+            display: flex;
+
+            flex-wrap: wrap;
+
+            gap: 12px;
+
+        }
+
+        .status-box {
+
+            min-width: 100px;
+
+            background: #171717;
+
+            border:
+                1px solid #292929;
+
+            border-radius: 8px;
+
+            padding: 15px;
+
+            text-align: center;
+
+        }
+
+        .status-code {
+
+            font-size: 20px;
+
+            font-weight: bold;
+
+        }
+
+        .status-count {
+
+            color: #888;
+
+            margin-top: 5px;
+
+            font-size: 12px;
+
+        }
+
+        .events-panel {
+
+            margin-top: 20px;
+
+            padding: 0;
+
+            overflow: hidden;
+
+        }
+
+        .events-header {
+
+            padding: 22px;
+
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: center;
+
+            border-bottom:
+                1px solid #282828;
+
+        }
+
+        .events-header h3 {
+
+            margin: 0;
+
+        }
+
+        .refresh-info {
+
+            color: #666;
+
+            font-size: 12px;
+
+        }
+
+        .table-container {
+
+            width: 100%;
+
+            overflow-x: auto;
+
+        }
+
+        table {
+
+            width: 100%;
+
+            border-collapse: collapse;
+
+            min-width: 1100px;
+
+        }
+
+        th {
+
+            text-align: left;
+
+            padding: 14px 16px;
+
+            background: #161616;
+
+            color: #888;
+
+            font-size: 11px;
+
+            text-transform: uppercase;
+
+            letter-spacing: 0.8px;
+
+            border-bottom:
+                1px solid #292929;
+
+            white-space: nowrap;
+
+        }
+
+        td {
+
+            padding: 14px 16px;
+
+            border-bottom:
+                1px solid #202020;
+
+            font-size: 12px;
+
+            vertical-align: top;
+
+        }
+
+        tr:hover td {
+
+            background: #171717;
+
+        }
+
+        .rule {
+
+            color: #ff5555;
+
+            font-weight: bold;
+
+        }
+
+        .pattern {
+
+            color: #aaa;
+
+            max-width: 260px;
+
+            word-break: break-word;
+
+            font-family:
+                "Courier New",
+                monospace;
+
+            font-size: 11px;
+
+        }
+
+        .action-block {
+
+            color: #ff4444;
+
+            font-weight: bold;
+
+        }
+
+        .action-allow {
+
+            color: #33dd77;
+
+            font-weight: bold;
+
+        }
+
+        .action-error {
+
+            color: #ffaa33;
+
+            font-weight: bold;
+
+        }
+
+        .severity-high {
+
+            color: #ff3333;
+
+        }
+
+        .severity-medium {
+
+            color: #ffaa33;
+
+        }
+
+        .severity-low {
+
+            color: #44bbff;
+
+        }
+
+        .empty {
+
+            text-align: center;
+
+            padding: 40px;
+
+            color: #666;
+
+        }
+
+        footer {
+
+            text-align: center;
+
+            padding: 30px;
+
+            color: #555;
+
+            font-size: 12px;
+
+        }
+
+        footer strong {
+
+            color: #ff3333;
+
+        }
+
+        @media (max-width: 1100px) {
+
+            .cards {
+
+                grid-template-columns:
+                    repeat(
+                        3,
+                        1fr
+                    );
+
+            }
+
+        }
+
+        @media (max-width: 800px) {
+
+            header {
+
+                padding: 18px;
+
+            }
+
+            main {
+
+                padding: 18px;
+
+            }
+
+            .cards {
+
+                grid-template-columns:
+                    repeat(
+                        2,
+                        1fr
+                    );
+
+            }
+
+            .grid {
+
+                grid-template-columns:
+                    1fr;
+
+            }
+
+            .severity-grid {
+
+                grid-template-columns:
+                    repeat(
+                        2,
+                        1fr
+                    );
+
+            }
+
+        }
+
+        @media (max-width: 500px) {
+
+            .cards {
+
+                grid-template-columns:
+                    1fr;
+
+            }
+
+            .config-grid {
+
+                grid-template-columns:
+                    1fr;
+
+            }
+
+            .brand h1 {
+
+                font-size: 20px;
+
+            }
+
+            .status {
+
+                display: none;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<header>
+
+    <div class="brand">
+
+        <div class="logo">
+            H
+        </div>
+
+        <div>
+
+            <h1>
+                HAWK <span>WAF</span>
+            </h1>
+
+        </div>
+
+    </div>
+
+
+    <div class="status">
+
+        <div class="status-dot"></div>
+
+        Protection Active
+
+    </div>
+
+</header>
+
+
+<main>
+
+
+    <div class="page-title">
+
+        <h2>
+            Security Dashboard
+        </h2>
+
+        <p>
+            Real-time monitoring and analysis
+            of HAWK WAF security events.
+        </p>
+
+    </div>
+
+
+    <!-- =========================
+         MAIN STATISTICS
+    ========================== -->
+
+    <div class="cards">
+
+
+        <div class="card total">
+
+            <div class="card-label">
+                Total Requests
+            </div>
+
+            <div
+                class="card-value"
+                id="total"
+            >
+                0
+            </div>
+
+        </div>
+
+
+        <div class="card allowed">
+
+            <div class="card-label">
+                Allowed
+            </div>
+
+            <div
+                class="card-value"
+                id="allowed"
+            >
+                0
+            </div>
+
+        </div>
+
+
+        <div class="card blocked">
+
+            <div class="card-label">
+                WAF Blocked
+            </div>
+
+            <div
+                class="card-value"
+                id="blocked"
+            >
+                0
+            </div>
+
+        </div>
+
+
+        <div class="card rate">
+
+            <div class="card-label">
+                Rate Limited
+            </div>
+
+            <div
+                class="card-value"
+                id="rate_limited"
+            >
+                0
+            </div>
+
+        </div>
+
+
+        <div class="card error">
+
+            <div class="card-label">
+                Errors
+            </div>
+
+            <div
+                class="card-value"
+                id="errors"
+            >
+                0
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+    <!-- =========================
+         CONFIGURATION
+    ========================== -->
+
+    <div class="panel">
+
+        <h3>
+            HAWK WAF System Configuration
+        </h3>
+
+
+        <div class="config-grid">
+
+
+            <div class="config-item">
+
+                <div class="config-label">
+                    WAF Status
+                </div>
+
+                <div
+                    class="config-value config-active"
+                    id="config_status"
+                >
+                    Protection Active
+                </div>
+
+            </div>
+
+
+            <div class="config-item">
+
+                <div class="config-label">
+                    WAF Name
+                </div>
+
+                <div
+                    class="config-value"
+                    id="config_name"
+                >
+                    HAWK WAF
+                </div>
+
+            </div>
+
+
+            <div class="config-item">
+
+                <div class="config-label">
+                    WAF Endpoint
+                </div>
+
+                <div
+                    class="config-value"
+                    id="config_waf"
+                >
+                    -
+                </div>
+
+            </div>
+
+
+            <div class="config-item">
+
+                <div class="config-label">
+                    Backend
+                </div>
+
+                <div
+                    class="config-value"
+                    id="config_backend"
+                >
+                    -
+                </div>
+
+            </div>
+
+
+            <div class="config-item">
+
+                <div class="config-label">
+                    Dashboard
+                </div>
+
+                <div
+                    class="config-value"
+                    id="config_dashboard"
+                >
+                    -
+                </div>
+
+            </div>
+
+
+            <div class="config-item">
+
+                <div class="config-label">
+                    Rate Limiting
+                </div>
+
+                <div
+                    class="config-value"
+                    id="config_rate"
+                >
+                    -
+                </div>
+
+            </div>
+
+
+            <div class="config-item">
+
+                <div class="config-label">
+                    Request Limit
+                </div>
+
+                <div
+                    class="config-value"
+                    id="config_max_requests"
+                >
+                    -
+                </div>
+
+            </div>
+
+
+            <div class="config-item">
+
+                <div class="config-label">
+                    Rate Window
+                </div>
+
+                <div
+                    class="config-value"
+                    id="config_window"
+                >
+                    -
+                </div>
+
+            </div>
+
+
+        </div>
+
+    </div>
+
+
+    <br>
+
+
+    <!-- =========================
+         SECURITY INFORMATION
+    ========================== -->
+
+    <div class="grid">
+
+
+        <div class="panel">
+
+            <h3>
+                Severity Overview
+            </h3>
+
+
+            <div class="severity-grid">
+
+
+                <div class="severity-box">
+
+                    <div class="severity-name">
+                        High
+                    </div>
+
+                    <div
+                        class="severity-value high"
+                        id="high"
+                    >
+                        0
+                    </div>
+
+                </div>
+
+
+                <div class="severity-box">
+
+                    <div class="severity-name">
+                        Medium
+                    </div>
+
+                    <div
+                        class="severity-value medium"
+                        id="medium"
+                    >
+                        0
+                    </div>
+
+                </div>
+
+
+                <div class="severity-box">
+
+                    <div class="severity-name">
+                        Low
+                    </div>
+
+                    <div
+                        class="severity-value low"
+                        id="low"
+                    >
+                        0
+                    </div>
+
+                </div>
+
+
+                <div class="severity-box">
+
+                    <div class="severity-name">
+                        Source IPs
+                    </div>
+
+                    <div
+                        class="severity-value ips"
+                        id="unique_ips"
+                    >
+                        0
+                    </div>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+
+        <div class="panel">
+
+            <h3>
+                Detected Attack Types
+            </h3>
+
+            <div
+                class="attack-list"
+                id="attack_types"
+            >
+
+                <div class="empty">
+                    No attacks detected
+                </div>
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+    <!-- =========================
+         HTTP STATUS
+    ========================== -->
+
+    <div class="panel">
+
+        <h3>
+            HTTP Status Distribution
+        </h3>
+
+        <div
+            class="status-list"
+            id="status_codes"
+        >
+
+            <div class="empty">
+                No HTTP data
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         SECURITY EVENTS
+    ========================== -->
+
+    <div class="panel events-panel">
+
+
+        <div class="events-header">
+
+            <h3>
+                Recent Security Events
+            </h3>
+
+            <div class="refresh-info">
+                Auto-refresh: 3 seconds
+            </div>
+
+        </div>
+
+
+        <div class="table-container">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>Time</th>
+
+                        <th>Source IP</th>
+
+                        <th>Method</th>
+
+                        <th>Path</th>
+
+                        <th>Rule</th>
+
+                        <th>Pattern</th>
+
+                        <th>Severity</th>
+
+                        <th>Action</th>
+
+                        <th>Status</th>
+
+                        <th>Processing</th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody id="events">
+
+                    <tr>
+
+                        <td
+                            colspan="10"
+                            class="empty"
+                        >
+                            Loading events...
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+</main>
+
+
+<footer>
+
+    <strong>HAWK WAF</strong>
+
+    &nbsp;|&nbsp;
+
+    Web Application Firewall
+
+    &nbsp;|&nbsp;
+
+    Local Security Laboratory
+
+</footer>
+
+
+<script>
+
+
+    // =========================================
+    // HTML ESCAPING
+    // =========================================
+
+    function escapeHtml(value) {
+
+        if (
+            value === null ||
+            value === undefined
+        ) {
+
+            return "";
+
+        }
+
+
+        return String(value)
+
+            .replace(
+                /&/g,
+                "&amp;"
+            )
+
+            .replace(
+                /</g,
+                "&lt;"
+            )
+
+            .replace(
+                />/g,
+                "&gt;"
+            )
+
+            .replace(
+                /"/g,
+                "&quot;"
+            )
+
+            .replace(
+                /'/g,
+                "&#039;"
+            );
+
+    }
+
+
+    // =========================================
+    // NUMBER FORMAT
+    // =========================================
+
+    function formatNumber(value) {
+
+        return Number(
+            value || 0
+        ).toLocaleString();
+
+    }
+
+
+    // =========================================
+    // LOAD STATS
+    // =========================================
+
+    async function loadStats() {
+
+        try {
+
+            const response =
+                await fetch(
+                    "/api/stats"
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Stats request failed"
+                );
+
+            }
+
+
+            const data =
+                await response.json();
+
+
+            document.getElementById(
+                "total"
+            ).textContent =
+                formatNumber(
+                    data.total
+                );
+
+
+            document.getElementById(
+                "allowed"
+            ).textContent =
+                formatNumber(
+                    data.allowed
+                );
+
+
+            document.getElementById(
+                "blocked"
+            ).textContent =
+                formatNumber(
+                    data.blocked
+                );
+
+
+            document.getElementById(
+                "rate_limited"
+            ).textContent =
+                formatNumber(
+                    data.rate_limited
+                );
+
+
+            document.getElementById(
+                "errors"
+            ).textContent =
+                formatNumber(
+                    data.errors
+                );
+
+
+            document.getElementById(
+                "high"
+            ).textContent =
+                formatNumber(
+                    data.high
+                );
+
+
+            document.getElementById(
+                "medium"
+            ).textContent =
+                formatNumber(
+                    data.medium
+                );
+
+
+            document.getElementById(
+                "low"
+            ).textContent =
+                formatNumber(
+                    data.low
+                );
+
+
+            document.getElementById(
+                "unique_ips"
+            ).textContent =
+                Object.keys(
+                    data.source_ips || {}
+                ).length;
+
+
+            renderAttackTypes(
+                data.attack_types || {}
+            );
+
+
+            renderStatusCodes(
+                data.status_codes || {}
+            );
+
+
+        } catch (error) {
+
+            console.error(
+                "Failed to load stats:",
+                error
+            );
+
+        }
+
+    }
+
+
+    // =========================================
+    // LOAD CONFIGURATION
+    // =========================================
+
+    async function loadConfig() {
+
+        try {
+
+            const response =
+                await fetch(
+                    "/api/config"
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Configuration request failed"
+                );
+
+            }
+
+
+            const data =
+                await response.json();
+
+
+            document.getElementById(
+                "config_name"
+            ).textContent =
+                data.name || "HAWK WAF";
+
+
+            document.getElementById(
+                "config_waf"
+            ).textContent =
+
+                `${data.waf_host}:${data.waf_port}`;
+
+
+            document.getElementById(
+                "config_backend"
+            ).textContent =
+
+                `${data.backend_host}:${data.backend_port}`;
+
+
+            document.getElementById(
+                "config_dashboard"
+            ).textContent =
+
+                `${data.dashboard_host}:${data.dashboard_port}`;
+
+
+            const rateElement =
+                document.getElementById(
+                    "config_rate"
+                );
+
+
+            if (
+                data.rate_limit_enabled
+            ) {
+
+                rateElement.textContent =
+                    "Enabled";
+
+                rateElement.className =
+                    "config-value config-active";
+
+            } else {
+
+                rateElement.textContent =
+                    "Disabled";
+
+                rateElement.className =
+                    "config-value config-disabled";
+
+            }
+
+
+            document.getElementById(
+                "config_max_requests"
+            ).textContent =
+
+                `${formatNumber(
+                    data.max_requests
+                )} requests`;
+
+
+            document.getElementById(
+                "config_window"
+            ).textContent =
+
+                `${data.window_seconds} seconds`;
+
+
+        } catch (error) {
+
+            console.error(
+                "Failed to load configuration:",
+                error
+            );
+
+
+            document.getElementById(
+                "config_status"
+            ).textContent =
+                "Configuration unavailable";
+
+        }
+
+    }
+
+
+    // =========================================
+    // ATTACK TYPES
+    // =========================================
+
+    function renderAttackTypes(
+        attacks
+    ) {
+
+        const container =
+            document.getElementById(
+                "attack_types"
+            );
+
+
+        const entries =
+            Object.entries(
+                attacks
+            );
+
+
+        if (
+            entries.length === 0
+        ) {
+
+            container.innerHTML =
+                `
+                <div class="empty">
+                    No attacks detected
+                </div>
+                `;
+
+            return;
+
+        }
+
+
+        const maximum =
+            Math.max(
+                ...entries.map(
+                    item => item[1]
+                )
+            );
+
+
+        container.innerHTML =
+            entries
+
+                .sort(
+                    (a, b) =>
+                        b[1] - a[1]
+                )
+
+                .map(
+                    ([name, count]) => {
+
+                        const width =
+                            maximum > 0
+                                ? (
+                                    count /
+                                    maximum
+                                ) * 100
+                                : 0;
+
+
+                        return `
+
+                        <div class="attack-row">
+
+                            <div class="attack-name">
+
+                                ${escapeHtml(
+                                    name
+                                )}
+
+                            </div>
+
+                            <div
+                                class="attack-bar-container"
+                            >
+
+                                <div
+                                    class="attack-bar"
+                                    style="width:${width}%"
+                                ></div>
+
+                            </div>
+
+                            <div class="attack-count">
+
+                                ${formatNumber(
+                                    count
+                                )}
+
+                            </div>
+
+                        </div>
+
+                        `;
+
+                    }
+                )
+
+                .join("");
+
+    }
+
+
+    // =========================================
+    // STATUS CODES
+    // =========================================
+
+    function renderStatusCodes(
+        statuses
+    ) {
+
+        const container =
+            document.getElementById(
+                "status_codes"
+            );
+
+
+        const entries =
+            Object.entries(
+                statuses
+            );
+
+
+        if (
+            entries.length === 0
+        ) {
+
+            container.innerHTML =
+                `
+                <div class="empty">
+                    No HTTP data
+                </div>
+                `;
+
+            return;
+
+        }
+
+
+        container.innerHTML =
+            entries
+
+                .sort(
+                    (a, b) =>
+                        Number(a[0]) -
+                        Number(b[0])
+                )
+
+                .map(
+                    ([code, count]) => {
+
+                        return `
+
+                        <div class="status-box">
+
+                            <div class="status-code">
+
+                                ${escapeHtml(
+                                    code
+                                )}
+
+                            </div>
+
+                            <div class="status-count">
+
+                                ${formatNumber(
+                                    count
+                                )}
+                                requests
+
+                            </div>
+
+                        </div>
+
+                        `;
+
+                    }
+                )
+
+                .join("");
+
+    }
+
+
+    // =========================================
+    // SECURITY EVENTS
+    // =========================================
+
+    async function loadEvents() {
+
+        try {
+
+            const response =
+                await fetch(
+                    "/api/events"
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Events request failed"
+                );
+
+            }
+
+
+            const data =
+                await response.json();
+
+
+            renderEvents(
+                data.events || []
+            );
+
+
+        } catch (error) {
+
+            console.error(
+                "Failed to load events:",
+                error
+            );
+
+        }
+
+    }
+
+
+    // =========================================
+    // RENDER EVENTS
+    // =========================================
+
+    function renderEvents(
+        events
+    ) {
+
+        const tbody =
+            document.getElementById(
+                "events"
+            );
+
+
+        if (
+            events.length === 0
+        ) {
+
+            tbody.innerHTML =
+                `
+                <tr>
+
+                    <td
+                        colspan="10"
+                        class="empty"
+                    >
+                        No security events
+                        recorded yet.
+                    </td>
+
+                </tr>
+                `;
+
+            return;
+
+        }
+
+
+        tbody.innerHTML =
+            events.map(
+                event => {
+
+
+                    const timestamp =
+                        event.timestamp
+                        || "-";
+
+
+                    const formattedTime =
+                        timestamp !== "-"
+                            ? new Date(
+                                timestamp
+                            ).toLocaleString()
+                            : "-";
+
+
+                    let actionClass = "";
+
+
+                    if (
+                        event.action ===
+                        "BLOCK"
+                    ) {
+
+                        actionClass =
+                            "action-block";
+
+                    }
+
+                    else if (
+                        event.action ===
+                        "ALLOW"
+                    ) {
+
+                        actionClass =
+                            "action-allow";
+
+                    }
+
+                    else if (
+                        event.action ===
+                        "ERROR"
+                    ) {
+
+                        actionClass =
+                            "action-error";
+
+                    }
+
+
+                    let severityClass = "";
+
+
+                    if (
+                        event.severity ===
+                        "HIGH"
+                    ) {
+
+                        severityClass =
+                            "severity-high";
+
+                    }
+
+                    else if (
+                        event.severity ===
+                        "MEDIUM"
+                    ) {
+
+                        severityClass =
+                            "severity-medium";
+
+                    }
+
+                    else if (
+                        event.severity ===
+                        "LOW"
+                    ) {
+
+                        severityClass =
+                            "severity-low";
+
+                    }
+
+
+                    return `
+
+                    <tr>
+
+                        <td>
+
+                            ${escapeHtml(
+                                formattedTime
+                            )}
+
+                        </td>
+
+
+                        <td>
+
+                            ${escapeHtml(
+                                event.source_ip
+                                || "-"
+                            )}
+
+                        </td>
+
+
+                        <td>
+
+                            ${escapeHtml(
+                                event.method
+                                || "-"
+                            )}
+
+                        </td>
+
+
+                        <td>
+
+                            ${escapeHtml(
+                                event.path
+                                || "-"
+                            )}
+
+                        </td>
+
+
+                        <td class="rule">
+
+                            ${escapeHtml(
+                                event.rule
+                                || "-"
+                            )}
+
+                        </td>
+
+
+                        <td class="pattern">
+
+                            ${escapeHtml(
+                                event.matched_pattern
+                                || "-"
+                            )}
+
+                        </td>
+
+
+                        <td
+                            class="${severityClass}"
+                        >
+
+                            ${escapeHtml(
+                                event.severity
+                                || "-"
+                            )}
+
+                        </td>
+
+
+                        <td
+                            class="${actionClass}"
+                        >
+
+                            ${escapeHtml(
+                                event.action
+                                || "-"
+                            )}
+
+                        </td>
+
+
+                        <td>
+
+                            ${escapeHtml(
+                                event.status_code
+                                ?? "-"
+                            )}
+
+                        </td>
+
+
+                        <td>
+
+                            ${
+                                event.processing_time_ms
+                                !== null &&
+                                event.processing_time_ms
+                                !== undefined
+
+                                ? escapeHtml(
+                                    event.processing_time_ms
+                                ) + " ms"
+
+                                : "-"
+                            }
+
+                        </td>
+
+                    </tr>
+
+                    `;
+
+                }
+            )
+
+            .join("");
+
+    }
+
+
+    // =========================================
+    // DASHBOARD REFRESH
+    // =========================================
+
+    async function refreshDashboard() {
+
+        await Promise.all([
+
+            loadStats(),
+
+            loadEvents(),
+
+            loadConfig()
+
+        ]);
+
+    }
+
+
+    // Initial load
+
+    refreshDashboard();
+
+
+    // Refresh every 3 seconds
+
+    setInterval(
+        refreshDashboard,
+        3000
+    );
+
+
+</script>
+
+
+</body>
+
+</html>

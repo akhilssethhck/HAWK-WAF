@@ -1,0 +1,3744 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>HAWK WAF - Admin Panel</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+
+            margin: 0;
+
+            min-height: 100vh;
+
+            background: #080808;
+
+            color: #ffffff;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+        }
+
+        header {
+
+            padding: 20px 30px;
+
+            background: #111111;
+
+            border-bottom:
+                1px solid #330000;
+
+            display: flex;
+
+            justify-content:
+                space-between;
+
+            align-items: center;
+        }
+
+        h1 {
+
+            margin: 0;
+
+            color: #ff2020;
+
+            letter-spacing: 2px;
+        }
+
+        h2 {
+
+            margin-top: 0;
+
+            color: #ff3030;
+        }
+
+        main {
+
+            max-width: 1100px;
+
+            margin: auto;
+
+            padding: 30px;
+        }
+
+        .card {
+
+            background: #111111;
+
+            border:
+                1px solid #333333;
+
+            border-radius: 10px;
+
+            padding: 25px;
+
+            margin-bottom: 20px;
+        }
+
+        .status {
+
+            color: #00ff88;
+
+            font-weight: bold;
+        }
+
+        .control {
+
+            display: flex;
+
+            justify-content:
+                space-between;
+
+            align-items: center;
+
+            gap: 20px;
+
+            padding: 18px;
+
+            margin-top: 12px;
+
+            background: #0d0d0d;
+
+            border:
+                1px solid #292929;
+
+            border-radius: 8px;
+        }
+
+        .control-info {
+
+            flex: 1;
+        }
+
+        .control-name {
+
+            font-size: 16px;
+
+            font-weight: bold;
+
+            margin-bottom: 6px;
+        }
+
+        .description {
+
+            color: #888888;
+
+            font-size: 13px;
+        }
+
+        .control-right {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 15px;
+
+            flex-shrink: 0;
+        }
+
+        .control-status {
+
+            min-width: 75px;
+
+            text-align: right;
+
+            font-size: 12px;
+
+            font-weight: bold;
+
+            text-transform: uppercase;
+        }
+
+        .control-status.enabled {
+
+            color: #00ff88;
+        }
+
+        .control-status.disabled {
+
+            color: #ff4444;
+        }
+
+        button {
+
+            padding:
+                10px 18px;
+
+            background: #a00000;
+
+            border: none;
+
+            border-radius: 5px;
+
+            color: white;
+
+            cursor: pointer;
+
+            font-weight: bold;
+        }
+
+        button:hover {
+
+            background: #e00000;
+        }
+
+        .toggle {
+
+            position: relative;
+
+            width: 54px;
+
+            height: 28px;
+
+            flex-shrink: 0;
+        }
+
+        .toggle input {
+
+            opacity: 0;
+
+            width: 0;
+
+            height: 0;
+        }
+
+        .slider {
+
+            position: absolute;
+
+            cursor: pointer;
+
+            inset: 0;
+
+            background: #333333;
+
+            border-radius: 30px;
+
+            transition: 0.2s;
+        }
+
+        .slider:before {
+
+            content: "";
+
+            position: absolute;
+
+            width: 22px;
+
+            height: 22px;
+
+            left: 3px;
+
+            top: 3px;
+
+            background: white;
+
+            border-radius: 50%;
+
+            transition: 0.2s;
+        }
+
+        .toggle input:checked + .slider {
+
+            background: #b00000;
+        }
+
+        .toggle input:checked + .slider:before {
+
+            transform:
+                translateX(26px);
+        }
+
+        .setting {
+
+            margin-top: 18px;
+        }
+
+        .setting label {
+
+            display: block;
+
+            margin-bottom: 8px;
+
+            font-weight: bold;
+        }
+
+        select,
+        input[type="number"] {
+
+            width: 100%;
+
+            padding: 11px;
+
+            background: #080808;
+
+            color: white;
+
+            border:
+                1px solid #444444;
+
+            border-radius: 5px;
+        }
+
+        .save-area {
+
+            margin-top: 20px;
+        }
+
+        .message {
+
+            margin-top: 15px;
+
+            padding: 12px;
+
+            border-radius: 5px;
+
+            display: block;
+
+            min-height: 20px;
+        }
+
+        .success {
+
+            display: block;
+
+            background: #082b19;
+
+            border:
+                1px solid #00aa55;
+
+            color: #00ff88;
+        }
+
+        .error {
+
+            display: block;
+
+            background: #2b0808;
+
+            border:
+                1px solid #aa0000;
+
+            color: #ff5555;
+        }
+
+        .grid {
+
+            display: grid;
+
+            grid-template-columns:
+                1fr 1fr;
+
+            gap: 20px;
+        }
+
+        pre {
+
+            background: #050505;
+
+            padding: 15px;
+
+            border-radius: 6px;
+
+            overflow: auto;
+
+            color: #cccccc;
+
+            font-size: 12px;
+        }
+
+        @media (max-width: 700px) {
+
+            .grid {
+
+                grid-template-columns:
+                    1fr;
+            }
+
+            main {
+
+                padding: 15px;
+            }
+
+            header {
+
+                padding: 15px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<header>
+
+    <h1>HAWK WAF ADMIN</h1>
+
+    <button onclick="logout()">
+        Logout
+    </button>
+
+</header>
+
+
+<main>
+
+
+<!-- ====================================================== -->
+<!-- STATUS -->
+<!-- ====================================================== -->
+
+<div class="card">
+
+    <h2>Administrator Control Panel</h2>
+
+    <p class="status">
+        ● Authenticated
+    </p>
+
+    <p>
+        Configure HAWK WAF security protections.
+    </p>
+
+</div>
+
+
+<!-- ====================================================== -->
+<!-- WAF RULES -->
+<!-- ====================================================== -->
+
+<div class="card">
+
+    <h2>WAF Detection Rules</h2>
+
+    <p class="description">
+        Enable or disable individual attack-detection rules.
+    </p>
+
+
+    <div id="rulesContainer"></div>
+
+
+</div>
+
+
+<!-- ====================================================== -->
+<!-- PROTECTED WEBSITES -->
+<!-- ====================================================== -->
+
+<div class="card">
+
+    <h2>Protected Websites</h2>
+
+    <p class="description">
+        Manage websites protected by HAWK WAF and configure their origin servers.
+    </p>
+
+
+    <!-- ADD WEBSITE -->
+
+    <div style="
+        margin-top:20px;
+        padding:18px;
+        border:1px solid #333;
+        border-radius:6px;
+        background:#0d0d0d;
+    ">
+
+        <h3 style="margin-top:0;">
+            Add Protected Website
+        </h3>
+
+
+        <div class="control">
+
+            <div class="control-info">
+
+                <div class="control-name">
+                    Domain
+                </div>
+
+                <div class="description">
+                    Domain or hostname used by clients to access the protected website.
+                </div>
+
+            </div>
+
+            <div class="control-right">
+
+                <input
+                    type="text"
+                    id="websiteDomain"
+                    placeholder="example.com"
+                    style="
+                        width:220px;
+                        padding:10px;
+                        background:#111;
+                        color:#fff;
+                        border:1px solid #333;
+                        border-radius:5px;
+                    "
+                >
+
+            </div>
+
+        </div>
+
+
+        <div class="control">
+
+            <div class="control-info">
+
+                <div class="control-name">
+                    Origin Server
+                </div>
+
+                <div class="description">
+                    HTTP or HTTPS URL of the protected application's origin server.
+                </div>
+
+            </div>
+
+            <div class="control-right">
+
+                <input
+                    type="text"
+                    id="websiteOrigin"
+                    placeholder="http://127.0.0.1:5001"
+                    style="
+                        width:260px;
+                        padding:10px;
+                        background:#111;
+                        color:#fff;
+                        border:1px solid #333;
+                        border-radius:5px;
+                    "
+                >
+
+            </div>
+
+        </div>
+
+
+        <div style="
+            display:flex;
+            justify-content:flex-end;
+            margin-top:20px;
+        ">
+
+            <button
+                type="button"
+                onclick="addProtectedWebsite()"
+                style="
+                    padding:10px 18px;
+                    background:#8b0000;
+                    color:#fff;
+                    border:1px solid #ff3333;
+                    border-radius:5px;
+                    cursor:pointer;
+                    font-weight:bold;
+                "
+            >
+                Add Website
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- WEBSITE LIST -->
+
+    <div style="margin-top:24px;">
+
+        <h3>
+            Registered Websites
+        </h3>
+
+        <div id="websitesContainer">
+
+            <p class="description">
+                Loading protected websites...
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ====================================================== -->
+<!-- REVERSE PROXY CONFIGURATION -->
+<!-- ====================================================== -->
+
+<div class="card">
+
+    <h2>Reverse Proxy Configuration</h2>
+
+    <div class="control">
+
+        <div class="control-info">
+
+            <div class="control-name">
+                Backend Host
+            </div>
+
+            <div class="description">
+                IP address or hostname of the protected web application.
+            </div>
+
+        </div>
+
+        <div class="control-right">
+
+            <input
+                type="text"
+                id="backendHost"
+                placeholder="127.0.0.1"
+                style="
+                    width:220px;
+                    padding:10px;
+                    background:#111;
+                    color:#fff;
+                    border:1px solid #333;
+                    border-radius:5px;
+                "
+            >
+
+        </div>
+
+    </div>
+
+
+    <div class="control">
+
+        <div class="control-info">
+
+            <div class="control-name">
+                Backend Port
+            </div>
+
+            <div class="description">
+                TCP port where the protected web application is listening.
+            </div>
+
+        </div>
+
+        <div class="control-right">
+
+            <input
+                type="number"
+                id="backendPort"
+                min="1"
+                max="65535"
+                placeholder="5001"
+                style="
+                    width:120px;
+                    padding:10px;
+                    background:#111;
+                    color:#fff;
+                    border:1px solid #333;
+                    border-radius:5px;
+                "
+            >
+
+        </div>
+
+    </div>
+
+
+    <div class="control">
+
+        <div class="control-info">
+
+            <div class="control-name">
+                Proxy Destination
+            </div>
+
+            <div class="description">
+                Requests allowed through HAWK WAF are forwarded to this destination.
+            </div>
+
+        </div>
+
+        <div class="control-right">
+
+            <span
+                id="backendDestination"
+                class="control-status"
+            >
+                —
+            </span>
+
+        </div>
+
+    </div>
+
+
+    <div style="
+        display:flex;
+        justify-content:flex-end;
+        margin-top:20px;
+    ">
+
+        <button
+            type="button"
+            onclick="saveBackendConfiguration()"
+            style="
+                padding:10px 18px;
+                background:#8b0000;
+                color:#fff;
+                border:1px solid #ff3333;
+                border-radius:5px;
+                cursor:pointer;
+                font-weight:bold;
+            "
+        >
+            Save Backend Configuration
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- ====================================================== -->
+<!-- TRAFFIC PROTECTION -->
+<!-- ====================================================== -->
+
+
+
+<div class="card">
+
+    <h2>Traffic Protection</h2>
+
+
+    <!-- RATE LIMIT -->
+
+    <div class="control">
+
+        <div class="control-info">
+
+            <div class="control-name">
+                Rate Limiting
+            </div>
+
+            <div class="description">
+                Limits the number of requests from a client
+                during a defined time window.
+            </div>
+
+        </div>
+
+
+        <div class="control-right">
+
+            <span
+                id="rateLimitStatus"
+                class="control-status disabled"
+            >
+                Disabled
+            </span>
+
+            <label class="toggle">
+
+                <input
+                    type="checkbox"
+                    id="rateLimitEnabled"
+                    onchange="saveRateLimit()"
+                >
+
+                <span class="slider"></span>
+
+            </label>
+
+        </div>
+
+    </div>
+
+
+    <!-- BOT PROTECTION -->
+
+    <div class="control">
+
+        <div class="control-info">
+
+            <div class="control-name">
+                Bot Protection
+            </div>
+
+            <div class="description">
+                Detects suspicious automated clients and
+                applies the configured bot action.
+            </div>
+
+        </div>
+
+
+        <div class="control-right">
+
+            <span
+                id="botProtectionStatus"
+                class="control-status disabled"
+            >
+                Disabled
+            </span>
+
+            <label class="toggle">
+
+                <input
+                    type="checkbox"
+                    id="botProtectionEnabled"
+                    onchange="saveBotProtection()"
+                >
+
+                <span class="slider"></span>
+
+            </label>
+
+        </div>
+
+    </div>
+
+
+    <!-- BROWSER VERIFICATION -->
+
+    <div class="control">
+
+        <div class="control-info">
+
+            <div class="control-name">
+                Browser Verification
+            </div>
+
+            <div class="description">
+                Requires suspicious clients to complete
+                browser verification before access.
+            </div>
+
+        </div>
+
+
+        <div class="control-right">
+
+            <span
+                id="challengeStatus"
+                class="control-status disabled"
+            >
+                Disabled
+            </span>
+
+            <label class="toggle">
+
+                <input
+                    type="checkbox"
+                    id="challengeEnabled"
+                    onchange="toggleBrowserVerification()"
+                >
+
+                <span class="slider"></span>
+
+            </label>
+
+        </div>
+
+    </div>
+
+
+    <!-- BOT MODE -->
+
+    <div class="setting">
+
+        <label for="botMode">
+            Bot Protection Mode
+        </label>
+
+        <select id="botMode">
+
+            <option value="challenge">
+                Challenge
+            </option>
+
+            <option value="block">
+                Block
+            </option>
+
+        </select>
+
+    </div>
+
+
+    <!-- CHALLENGE MODE -->
+
+    <div class="setting">
+
+        <label for="challengeMode">
+            Browser Verification Mode
+        </label>
+
+        <select id="challengeMode">
+
+            <option value="suspicious">
+                Suspicious Clients
+            </option>
+
+            <option value="always">
+                Always
+            </option>
+
+        </select>
+
+    </div>
+
+
+    <!-- TOKEN -->
+
+    <div class="setting">
+
+        <label for="tokenLifetime">
+            Verification Lifetime (seconds)
+        </label>
+
+        <input
+            type="number"
+            id="tokenLifetime"
+            min="30"
+            max="86400"
+        >
+
+    </div>
+
+
+    <!-- ====================================================== -->
+    <!-- PER-SITE WAF RULE POLICY -->
+    <!-- ====================================================== -->
+
+    <div class="card">
+
+        <h2>Per-Site WAF Rules</h2>
+
+        <p class="description">
+            Configure individual attack-detection rules for a specific
+            protected website. Sites without an override inherit the
+            global WAF rule state.
+        </p>
+
+        <div class="control" style="margin-top:20px;">
+
+            <div class="control-info">
+
+                <div class="control-name">
+                    Protected Website
+                </div>
+
+                <div class="description">
+                    Select the website whose WAF policy you want to manage.
+                </div>
+
+            </div>
+
+            <div class="control-right">
+
+                <select
+                    id="siteWafRuleDomain"
+                    onchange="loadSiteWafRules()"
+                    style="
+                        min-width:240px;
+                        padding:10px;
+                        border-radius:6px;
+                        border:1px solid #444;
+                        background:#111;
+                        color:#fff;
+                    "
+                >
+                    <option value="">
+                        Select website
+                    </option>
+                </select>
+
+            </div>
+
+        </div>
+
+        <div
+            id="siteWafRulesContainer"
+            style="margin-top:20px;"
+        >
+
+            <p class="description">
+                Select a protected website to view its WAF rules.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- ====================================================== -->
+    <!-- PER-SITE BOT PROTECTION -->
+    <!-- ====================================================== -->
+
+    <div class="card">
+
+        <h2>Per-Site Bot Protection</h2>
+
+        <p class="description">
+            Configure automated-traffic protection independently
+            for each protected website.
+        </p>
+
+        <div class="control" style="margin-top:20px;">
+
+            <div class="control-info">
+
+                <div class="control-name">
+                    Protected Website
+                </div>
+
+                <div class="description">
+                    Select the website whose Bot Protection policy
+                    you want to configure.
+                </div>
+
+            </div>
+
+            <div class="control-right">
+
+                <select
+                    id="siteBotDomain"
+                    onchange="loadSiteBotProtection()"
+                    style="
+                        min-width:240px;
+                        padding:10px;
+                        border-radius:6px;
+                        border:1px solid #444;
+                        background:#111;
+                        color:#fff;
+                    "
+                >
+                    <option value="">
+                        Select website
+                    </option>
+                </select>
+
+            </div>
+
+        </div>
+
+        <div
+            id="siteBotProtectionContainer"
+            style="margin-top:20px;"
+        >
+
+            <p class="description">
+                Select a protected website to view its
+                Bot Protection policy.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- ====================================================== -->
+    <!-- PER-SITE BROWSER VERIFICATION -->
+    <!-- ====================================================== -->
+
+    <div class="card">
+
+        <h2>Per-Site Browser Verification</h2>
+
+        <p class="description">
+            Configure browser verification independently for
+            each protected website.
+        </p>
+
+        <div class="control" style="margin-top:20px;">
+
+            <div class="control-info">
+
+                <div class="control-name">
+                    Protected Website
+                </div>
+
+                <div class="description">
+                    Select the website whose Browser Verification
+                    policy you want to configure.
+                </div>
+
+            </div>
+
+            <div class="control-right">
+
+                <select
+                    id="siteBrowserDomain"
+                    onchange="loadSiteBrowserVerification()"
+                    style="
+                        min-width:240px;
+                        padding:10px;
+                        border-radius:6px;
+                        border:1px solid #444;
+                        background:#111;
+                        color:#fff;
+                    "
+                >
+                    <option value="">
+                        Select website
+                    </option>
+                </select>
+
+            </div>
+
+        </div>
+
+        <div
+            id="siteBrowserVerificationContainer"
+            style="margin-top:20px;"
+        >
+
+            <p class="description">
+                Select a protected website to view its
+                Browser Verification policy.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- SECURITY LOG MANAGEMENT -->
+    <section class="card" style="margin-top: 24px;">
+
+        <h2>Security Log Management</h2>
+
+        <p style="margin-bottom: 18px;">
+            Clear recorded HAWK WAF security events.
+            The Admin Audit Log is preserved.
+        </p>
+
+        <button
+            type="button"
+            onclick="clearSecurityLogs()"
+            style="
+                background: #8b0000;
+                color: white;
+                border: 1px solid #ff4444;
+                padding: 12px 20px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: 600;
+            "
+        >
+            Clear Security Logs
+        </button>
+
+    </section>
+
+
+    <div
+        id="securityMessage"
+        class="message"
+    ></div>
+
+
+</div>
+
+
+<!-- ====================================================== -->
+<!-- CURRENT CONFIG -->
+<!-- ====================================================== -->
+
+<div class="card">
+
+    <h2>Current Configuration</h2>
+
+    <pre id="configOutput">
+Loading...
+    </pre>
+
+</div>
+
+
+</main>
+
+
+<script>
+
+
+// ========================================================
+// BROWSER VERIFICATION TOGGLE
+// ========================================================
+
+async function toggleBrowserVerification() {
+
+    const element =
+        document.getElementById("challengeEnabled");
+
+    if (!element) {
+        return;
+    }
+
+    const enabled = element.checked;
+
+    try {
+
+        const response = await fetch(
+            "/api/admin/challenge",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                credentials: "same-origin",
+                body: JSON.stringify({
+                    enabled: enabled
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || data.success !== true) {
+            throw new Error(
+                data.error ||
+                "Failed to update Browser Verification"
+            );
+        }
+
+        showMessage(
+            "Browser Verification " +
+            (enabled ? "enabled" : "disabled"),
+            true
+        );
+
+        updateControlStatus(
+            "challengeStatus",
+            enabled
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        element.checked = !enabled;
+
+        showMessage(
+            error.message,
+            false
+        );
+    }
+}
+
+
+// ========================================================
+// PER-SITE BROWSER VERIFICATION
+// ========================================================
+
+async function initializeSiteBrowserVerification() {
+
+    const select =
+        document.getElementById(
+            "siteBrowserDomain"
+        );
+
+    if (!select) {
+        return;
+    }
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/admin/websites",
+                {
+                    credentials:
+                        "same-origin"
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+            throw new Error(
+                data.error ||
+                "Unable to load websites"
+            );
+        }
+
+        select.innerHTML =
+            '<option value="">Select website</option>';
+
+        for (
+            const website of data.websites
+        ) {
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                website.domain;
+
+            option.textContent =
+                website.domain;
+
+            select.appendChild(
+                option
+            );
+        }
+
+    } catch (error) {
+
+        console.error(error);
+
+        select.innerHTML =
+            '<option value="">Unable to load websites</option>';
+    }
+}
+
+
+async function loadSiteBrowserVerification() {
+
+    const select =
+        document.getElementById(
+            "siteBrowserDomain"
+        );
+
+    const container =
+        document.getElementById(
+            "siteBrowserVerificationContainer"
+        );
+
+    if (!select || !container) {
+        return;
+    }
+
+    const domain =
+        select.value;
+
+    if (!domain) {
+
+        container.innerHTML =
+            '<p class="description">' +
+            'Select a protected website to view its ' +
+            'Browser Verification policy.' +
+            '</p>';
+
+        return;
+    }
+
+    container.innerHTML =
+        '<p class="description">Loading Browser Verification...</p>';
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/admin/websites/"
+                + encodeURIComponent(domain)
+                + "/browser-verification",
+                {
+                    credentials:
+                        "same-origin"
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+            throw new Error(
+                data.error ||
+                "Unable to load Browser Verification"
+            );
+        }
+
+        const browser =
+            data.browser_verification || {};
+
+        container.innerHTML = `
+
+            <div class="control">
+
+                <div class="control-info">
+
+                    <div class="control-name">
+                        Browser Verification
+                    </div>
+
+                    <div class="description">
+                        Require browser verification for
+                        ${domain}.
+                    </div>
+
+                </div>
+
+                <label class="toggle">
+
+                    <input
+                        type="checkbox"
+                        id="siteBrowserEnabled"
+                        ${browser.enabled ? "checked" : ""}
+                        onchange="
+                            saveSiteBrowserField(
+                                '${escapeJs(domain)}',
+                                'enabled',
+                                this.checked
+                            )
+                        "
+                    >
+
+                    <span class="slider"></span>
+
+                </label>
+
+            </div>
+
+
+            <div class="setting">
+
+                <label for="siteBrowserMode">
+                    Browser Verification Mode
+                </label>
+
+                <select id="siteBrowserMode">
+
+                    <option
+                        value="suspicious"
+                        ${browser.mode === "suspicious" ? "selected" : ""}
+                    >
+                        Suspicious Clients
+                    </option>
+
+                    <option
+                        value="always"
+                        ${browser.mode === "always" ? "selected" : ""}
+                    >
+                        Always
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div
+                style="
+                    margin-top:18px;
+                    display:flex;
+                    gap:10px;
+                    flex-wrap:wrap;
+                "
+            >
+
+                <button
+                    type="button"
+                    onclick="
+                        saveSiteBrowserConfiguration(
+                            '${escapeJs(domain)}'
+                        )
+                    "
+                    style="
+                        padding:10px 16px;
+                        border:1px solid #555;
+                        border-radius:6px;
+                        background:#151515;
+                        color:#fff;
+                        cursor:pointer;
+                    "
+                >
+                    Save Browser Policy
+                </button>
+
+            </div>
+
+        `;
+
+    } catch (error) {
+
+        console.error(error);
+
+        container.innerHTML =
+            '<p class="description">' +
+            'Unable to load site Browser Verification.' +
+            '</p>';
+    }
+}
+
+
+async function saveSiteBrowserField(
+    domain,
+    field,
+    value
+) {
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/admin/websites/"
+                + encodeURIComponent(domain)
+                + "/browser-verification",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    credentials:
+                        "same-origin",
+
+                    body:
+                        JSON.stringify({
+                            [field]:
+                                value
+                        })
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+            throw new Error(
+                data.error ||
+                "Unable to update Browser Verification"
+            );
+        }
+
+        showMessage(
+            "Browser Verification "
+            + (
+                value
+                    ? "enabled"
+                    : "disabled"
+            )
+            + " for "
+            + domain,
+            true
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+            error.message ||
+            "Unable to update Browser Verification",
+            false
+        );
+
+        await loadSiteBrowserVerification();
+    }
+}
+
+
+async function saveSiteBrowserConfiguration(
+    domain
+) {
+
+    const modeElement =
+        document.getElementById(
+            "siteBrowserMode"
+        );
+
+    if (!modeElement) {
+        return;
+    }
+
+    const mode =
+        modeElement.value;
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/admin/websites/"
+                + encodeURIComponent(domain)
+                + "/browser-verification",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    credentials:
+                        "same-origin",
+
+                    body:
+                        JSON.stringify({
+                            mode: mode
+                        })
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+            throw new Error(
+                data.error ||
+                "Unable to save Browser Verification"
+            );
+        }
+
+        showMessage(
+            "Browser Verification policy saved for "
+            + domain,
+            true
+        );
+
+        await loadSiteBrowserVerification();
+
+    } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+            error.message ||
+            "Unable to save Browser Verification",
+            false
+        );
+    }
+}
+
+
+
+// ========================================================
+// LOGOUT
+// ========================================================
+
+async function logout() {
+
+    try {
+
+        await fetch(
+            "/api/admin/logout",
+            {
+                method: "POST"
+            }
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+    }
+
+    window.location.href =
+        "/admin";
+}
+
+
+// ========================================================
+// AUTHENTICATION
+// ========================================================
+
+async function checkAuthentication() {
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/admin/status"
+            );
+
+        const data =
+            await response.json();
+
+        if (!data.authenticated) {
+
+            window.location.href =
+                "/admin";
+
+            return false;
+        }
+
+        return true;
+
+    } catch (error) {
+
+        console.error(error);
+
+        window.location.href =
+            "/admin";
+
+        return false;
+    }
+}
+
+
+
+// ========================================================
+// CONTROL STATUS
+// ========================================================
+
+function updateControlStatus(elementId, enabled) {
+
+    const element =
+        document.getElementById(elementId);
+
+    if (!element) {
+        return;
+    }
+
+    element.textContent =
+        enabled ? "Enabled" : "Disabled";
+
+    element.className =
+        "control-status " +
+        (enabled ? "enabled" : "disabled");
+}
+
+
+// ========================================================
+// RATE LIMITING
+// ========================================================
+
+async function saveRateLimit() {
+
+    const element =
+        document.getElementById("rateLimitEnabled");
+
+    if (!element) {
+        return;
+    }
+
+    const enabled = element.checked;
+
+    try {
+
+        const response = await fetch(
+            "/api/admin/rate-limit",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                credentials: "same-origin",
+                body: JSON.stringify({
+                    enabled: enabled
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || data.success !== true) {
+            throw new Error(
+                data.error ||
+                "Failed to update Rate Limiting"
+            );
+        }
+
+        updateControlStatus(
+            "rateLimitStatus",
+            enabled
+        );
+
+        showMessage(
+            "Rate Limiting " +
+            (enabled ? "enabled" : "disabled"),
+            true
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        element.checked = !enabled;
+
+        showMessage(
+            error.message ||
+            "Failed to update Rate Limiting",
+            false
+        );
+    }
+}
+
+
+// ========================================================
+// BACKEND CONFIGURATION
+// ========================================================
+
+async function saveBackendConfiguration() {
+
+    const hostElement =
+        document.getElementById("backendHost");
+
+    const portElement =
+        document.getElementById("backendPort");
+
+    const destinationElement =
+        document.getElementById("backendDestination");
+
+    if (!hostElement || !portElement) {
+        return;
+    }
+
+    const host = hostElement.value.trim();
+    const port = Number(portElement.value);
+
+    if (!host) {
+
+        if (destinationElement) {
+            destinationElement.textContent =
+                "Invalid host";
+        }
+
+        return;
+    }
+
+    if (
+        !Number.isInteger(port) ||
+        port < 1 ||
+        port > 65535
+    ) {
+
+        if (destinationElement) {
+            destinationElement.textContent =
+                "Invalid port";
+        }
+
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            "/api/admin/backend",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                credentials: "same-origin",
+                body: JSON.stringify({
+                    host: host,
+                    port: port
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || data.success !== true) {
+
+            throw new Error(
+                data.error ||
+                "Failed to update backend configuration"
+            );
+        }
+
+        if (destinationElement) {
+
+            destinationElement.textContent =
+                "http://" +
+                data.backend.host +
+                ":" +
+                data.backend.port;
+        }
+
+        if (typeof showSecurityMessage === "function") {
+
+            showSecurityMessage(
+                "Backend configuration saved",
+                true
+            );
+
+        } else if (typeof showMessage === "function") {
+
+            showMessage(
+                "Backend configuration saved",
+                true
+            );
+        }
+
+    } catch (error) {
+
+        if (typeof showSecurityMessage === "function") {
+
+            showSecurityMessage(
+                error.message,
+                false
+            );
+
+        } else if (typeof showMessage === "function") {
+
+            showMessage(
+                error.message,
+                false
+            );
+        }
+    }
+}
+
+
+// ========================================================
+// BOT PROTECTION
+// ========================================================
+
+
+async function saveBotProtection() {
+
+    const element =
+        document.getElementById("botProtectionEnabled");
+
+    if (!element) {
+        return;
+    }
+
+    const enabled = element.checked;
+
+    try {
+
+        const response = await fetch(
+            "/api/admin/bot",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                credentials: "same-origin",
+                body: JSON.stringify({
+                    enabled: enabled
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || data.success !== true) {
+            throw new Error(
+                data.error ||
+                "Failed to update Bot Protection"
+            );
+        }
+
+        updateControlStatus(
+            "botProtectionStatus",
+            enabled
+        );
+
+        showMessage(
+            "Bot Protection " +
+            (enabled ? "enabled" : "disabled"),
+            true
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        element.checked = !enabled;
+
+        showMessage(
+            error.message ||
+            "Failed to update Bot Protection",
+            false
+        );
+    }
+}
+
+
+// ========================================================
+// LOAD CONFIGURATION
+// ========================================================
+
+
+// ========================================================
+
+async function loadConfiguration() {
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/config"
+            );
+
+        const config =
+            await response.json();
+
+
+        // Backend configuration
+
+        document.getElementById(
+            "backendHost"
+        ).value =
+            config.backend_host ||
+            "127.0.0.1";
+
+        document.getElementById(
+            "backendPort"
+        ).value =
+            config.backend_port ||
+            5001;
+
+        const backendDestination =
+            document.getElementById(
+                "backendDestination"
+            );
+
+        if (backendDestination) {
+
+            backendDestination.textContent =
+                "http://" +
+                (config.backend_host || "127.0.0.1") +
+                ":" +
+                (config.backend_port || 5001);
+
+        }
+
+
+        // Rate limit
+
+        document.getElementById(
+            "rateLimitEnabled"
+        ).checked =
+            Boolean(
+                config.rate_limit_enabled
+            );
+
+        updateControlStatus(
+            "rateLimitStatus",
+            Boolean(config.rate_limit_enabled)
+        );
+
+
+        // Bot protection
+
+        document.getElementById(
+            "botProtectionEnabled"
+        ).checked =
+            Boolean(
+                config.bot_protection_enabled
+            );
+
+        updateControlStatus(
+            "botProtectionStatus",
+            Boolean(config.bot_protection_enabled)
+        );
+
+
+        document.getElementById(
+            "botMode"
+        ).value =
+            config.bot_protection_mode ||
+            "challenge";
+
+
+        // Browser verification
+
+        document.getElementById(
+            "challengeEnabled"
+        ).checked =
+            Boolean(
+                config.challenge_enabled
+            );
+
+        updateControlStatus(
+            "challengeStatus",
+            Boolean(config.challenge_enabled)
+        );
+
+
+        document.getElementById(
+            "challengeMode"
+        ).value =
+            config.challenge_mode ||
+            "suspicious";
+
+
+        document.getElementById(
+            "tokenLifetime"
+        ).value =
+            config.token_lifetime ||
+            300;
+
+
+        document.getElementById(
+            "configOutput"
+        ).textContent =
+            JSON.stringify(
+                config,
+                null,
+                4
+            );
+
+
+    } catch (error) {
+
+        console.error(error);
+
+    }
+
+}
+
+
+
+// ========================================================
+// PER-SITE WAF RULE MANAGEMENT
+// ========================================================
+
+async function initializeSiteWafRules() {
+
+    const select =
+        document.getElementById(
+            "siteWafRuleDomain"
+        );
+
+    if (!select) {
+        return;
+    }
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/admin/websites",
+                {
+                    credentials:
+                        "same-origin"
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+            throw new Error(
+                data.error ||
+                "Unable to load websites"
+            );
+        }
+
+        select.innerHTML =
+            '<option value="">Select website</option>';
+
+        for (
+            const website of data.websites
+        ) {
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                website.domain;
+
+            option.textContent =
+                website.domain;
+
+            select.appendChild(
+                option
+            );
+        }
+
+    } catch (error) {
+
+        console.error(error);
+
+        select.innerHTML =
+            '<option value="">Unable to load websites</option>';
+    }
+}
+
+
+async function loadSiteWafRules() {
+
+    const select =
+        document.getElementById(
+            "siteWafRuleDomain"
+        );
+
+    const container =
+        document.getElementById(
+            "siteWafRulesContainer"
+        );
+
+    if (!select || !container) {
+        return;
+    }
+
+    const domain =
+        select.value;
+
+    if (!domain) {
+
+        container.innerHTML =
+            '<p class="description">' +
+            'Select a protected website to view its WAF rules.' +
+            '</p>';
+
+        return;
+    }
+
+    container.innerHTML =
+        '<p class="description">Loading WAF rules...</p>';
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/admin/websites/"
+                + encodeURIComponent(domain)
+                + "/rules",
+                {
+                    credentials:
+                        "same-origin"
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+            throw new Error(
+                data.error ||
+                "Unable to load website rules"
+            );
+        }
+
+        container.innerHTML = "";
+
+        for (
+            const ruleName in data.rules
+        ) {
+
+            const rule =
+                data.rules[ruleName];
+
+            if (
+                !rule ||
+                typeof rule !== "object"
+            ) {
+                continue;
+            }
+
+            const row =
+                document.createElement(
+                    "div"
+                );
+
+            row.className =
+                "control";
+
+            const statusText =
+                rule.override
+                    ? "Site override"
+                    : "Global policy";
+
+            const checked =
+                rule.enabled
+                    ? "checked"
+                    : "";
+
+            row.innerHTML = `
+
+                <div class="control-info">
+
+                    <div class="control-name">
+                        ${formatRuleName(ruleName)}
+                    </div>
+
+                    <div class="description">
+                        Severity:
+                        ${rule.severity || "HIGH"}
+                        &nbsp; • &nbsp;
+                        ${statusText}
+                    </div>
+
+                </div>
+
+                <div
+                    class="control-right"
+                    style="
+                        display:flex;
+                        align-items:center;
+                        gap:12px;
+                    "
+                >
+
+                    <label class="toggle">
+
+                        <input
+                            type="checkbox"
+                            ${checked}
+                            onchange="
+                                toggleSiteWafRule(
+                                    '${escapeJs(domain)}',
+                                    '${escapeJs(ruleName)}',
+                                    this.checked
+                                )
+                            "
+                        >
+
+                        <span class="slider"></span>
+
+                    </label>
+
+                    ${
+                        rule.override
+                            ? `
+                                <button
+                                    type="button"
+                                    onclick="
+                                        resetSiteWafRule(
+                                            '${escapeJs(domain)}',
+                                            '${escapeJs(ruleName)}'
+                                        )
+                                    "
+                                    style="
+                                        padding:7px 10px;
+                                        border:1px solid #555;
+                                        border-radius:5px;
+                                        background:#151515;
+                                        color:#ddd;
+                                        cursor:pointer;
+                                    "
+                                >
+                                    Use Global
+                                </button>
+                              `
+                            : ""
+                    }
+
+                </div>
+            `;
+
+            container.appendChild(
+                row
+            );
+        }
+
+    } catch (error) {
+
+        console.error(error);
+
+        container.innerHTML =
+            '<p class="description">' +
+            'Unable to load site WAF rules.' +
+            '</p>';
+    }
+}
+
+
+async function toggleSiteWafRule(
+    domain,
+    ruleName,
+    enabled
+) {
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/admin/websites/"
+                + encodeURIComponent(domain)
+                + "/rules/"
+                + encodeURIComponent(ruleName),
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    credentials:
+                        "same-origin",
+
+                    body:
+                        JSON.stringify({
+                            enabled:
+                                enabled
+                        })
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+            throw new Error(
+                data.error ||
+                "Unable to change site WAF rule"
+            );
+        }
+
+        showMessage(
+            formatRuleName(ruleName)
+            + " for "
+            + domain
+            + (
+                enabled
+                    ? " enabled"
+                    : " disabled"
+            ),
+            true
+        );
+
+        await loadSiteWafRules();
+
+    } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+            error.message ||
+            "Unable to change site WAF rule",
+            false
+        );
+
+        await loadSiteWafRules();
+    }
+}
+
+
+async function resetSiteWafRule(
+    domain,
+    ruleName
+) {
+
+    const confirmed =
+        confirm(
+            "Reset "
+            + formatRuleName(ruleName)
+            + " for "
+            + domain
+            + " to the global WAF policy?"
+        );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/admin/websites/"
+                + encodeURIComponent(domain)
+                + "/rules/"
+                + encodeURIComponent(ruleName),
+                {
+                    method: "DELETE",
+
+                    credentials:
+                        "same-origin"
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+            throw new Error(
+                data.error ||
+                "Unable to reset site WAF rule"
+            );
+        }
+
+        showMessage(
+            formatRuleName(ruleName)
+            + " now uses the global policy",
+            true
+        );
+
+        await loadSiteWafRules();
+
+    } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+            error.message ||
+            "Unable to reset site WAF rule",
+            false
+        );
+    }
+}
+
+
+// ========================================================
+// PER-SITE BOT PROTECTION MANAGEMENT
+// ========================================================
+
+async function initializeSiteBotProtection() {
+
+    const select =
+        document.getElementById(
+            "siteBotDomain"
+        );
+
+    if (!select) {
+        return;
+    }
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/admin/websites",
+                {
+                    credentials:
+                        "same-origin"
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+            throw new Error(
+                data.error ||
+                "Unable to load websites"
+            );
+        }
+
+        select.innerHTML =
+            '<option value="">Select website</option>';
+
+        for (
+            const website of data.websites
+        ) {
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                website.domain;
+
+            option.textContent =
+                website.domain;
+
+            select.appendChild(
+                option
+            );
+        }
+
+    } catch (error) {
+
+        console.error(error);
+
+        select.innerHTML =
+            '<option value="">Unable to load websites</option>';
+    }
+}
+
+
+async function loadSiteBotProtection() {
+
+    const select =
+        document.getElementById(
+            "siteBotDomain"
+        );
+
+    const container =
+        document.getElementById(
+            "siteBotProtectionContainer"
+        );
+
+    if (!select || !container) {
+        return;
+    }
+
+    const domain =
+        select.value;
+
+    if (!domain) {
+
+        container.innerHTML =
+            '<p class="description">' +
+            'Select a protected website to view its ' +
+            'Bot Protection policy.' +
+            '</p>';
+
+        return;
+    }
+
+    container.innerHTML =
+        '<p class="description">Loading Bot Protection...</p>';
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/admin/websites/"
+                + encodeURIComponent(domain)
+                + "/bot",
+                {
+                    credentials:
+                        "same-origin"
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+            throw new Error(
+                data.error ||
+                "Unable to load Bot Protection"
+            );
+        }
+
+        const bot =
+            data.bot_protection || {};
+
+        container.innerHTML = `
+
+            <div class="control">
+
+                <div class="control-info">
+
+                    <div class="control-name">
+                        Bot Protection
+                    </div>
+
+                    <div class="description">
+                        Enable automated-traffic detection
+                        for ${domain}.
+                    </div>
+
+                </div>
+
+                <label class="toggle">
+
+                    <input
+                        type="checkbox"
+                        id="siteBotEnabled"
+                        ${bot.enabled ? "checked" : ""}
+                        onchange="saveSiteBotField('${escapeJs(domain)}', 'enabled', this.checked)"
+                    >
+
+                    <span class="slider"></span>
+
+                </label>
+
+            </div>
+
+
+            <div class="setting">
+
+                <label for="siteBotMode">
+                    Bot Protection Mode
+                </label>
+
+                <select id="siteBotMode">
+
+                    <option
+                        value="challenge"
+                        ${bot.mode === "challenge" ? "selected" : ""}
+                    >
+                        Challenge
+                    </option>
+
+                    <option
+                        value="block"
+                        ${bot.mode === "block" ? "selected" : ""}
+                    >
+                        Block
+                    </option>
+
+                    <option
+                        value="log"
+                        ${bot.mode === "log" ? "selected" : ""}
+                    >
+                        Log Only
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="setting">
+
+                <label for="siteBotWindow">
+                    Request Window (seconds)
+                </label>
+
+                <input
+                    type="number"
+                    id="siteBotWindow"
+                    min="1"
+                    max="86400"
+                    value="${Number(bot.request_window) || 10}"
+                >
+
+            </div>
+
+
+            <div class="setting">
+
+                <label for="siteBotMaxRequests">
+                    Maximum Requests
+                </label>
+
+                <input
+                    type="number"
+                    id="siteBotMaxRequests"
+                    min="1"
+                    max="100000"
+                    value="${Number(bot.max_requests) || 30}"
+                >
+
+            </div>
+
+
+            <div
+                style="
+                    margin-top:18px;
+                    display:flex;
+                    gap:10px;
+                    flex-wrap:wrap;
+                "
+            >
+
+                <button
+                    type="button"
+                    onclick="saveSiteBotConfiguration('${escapeJs(domain)}')"
+                    style="
+                        padding:10px 16px;
+                        border:1px solid #555;
+                        border-radius:6px;
+                        background:#151515;
+                        color:#fff;
+                        cursor:pointer;
+                    "
+                >
+                    Save Bot Policy
+                </button>
+
+            </div>
+
+        `;
+
+    } catch (error) {
+
+        console.error(error);
+
+        container.innerHTML =
+            '<p class="description">' +
+            'Unable to load site Bot Protection.' +
+            '</p>';
+    }
+}
+
+
+async function saveSiteBotField(
+    domain,
+    field,
+    value
+) {
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/admin/websites/"
+                + encodeURIComponent(domain)
+                + "/bot",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    credentials:
+                        "same-origin",
+
+                    body:
+                        JSON.stringify({
+                            [field]:
+                                value
+                        })
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+            throw new Error(
+                data.error ||
+                "Unable to update Bot Protection"
+            );
+        }
+
+        showMessage(
+            "Bot Protection "
+            + (
+                value
+                    ? "enabled"
+                    : "disabled"
+            )
+            + " for "
+            + domain,
+            true
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+            error.message ||
+            "Unable to update Bot Protection",
+            false
+        );
+
+        await loadSiteBotProtection();
+    }
+}
+
+
+async function saveSiteBotConfiguration(
+    domain
+) {
+
+    const modeElement =
+        document.getElementById(
+            "siteBotMode"
+        );
+
+    const windowElement =
+        document.getElementById(
+            "siteBotWindow"
+        );
+
+    const maxElement =
+        document.getElementById(
+            "siteBotMaxRequests"
+        );
+
+    if (
+        !modeElement ||
+        !windowElement ||
+        !maxElement
+    ) {
+        return;
+    }
+
+    const mode =
+        modeElement.value;
+
+    const requestWindow =
+        Number(
+            windowElement.value
+        );
+
+    const maxRequests =
+        Number(
+            maxElement.value
+        );
+
+    if (
+        !Number.isInteger(requestWindow)
+        || requestWindow < 1
+        || requestWindow > 86400
+    ) {
+
+        showMessage(
+            "Request window must be between 1 and 86400 seconds.",
+            false
+        );
+
+        return;
+    }
+
+    if (
+        !Number.isInteger(maxRequests)
+        || maxRequests < 1
+        || maxRequests > 100000
+    ) {
+
+        showMessage(
+            "Maximum requests must be between 1 and 100000.",
+            false
+        );
+
+        return;
+    }
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/admin/websites/"
+                + encodeURIComponent(domain)
+                + "/bot",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    credentials:
+                        "same-origin",
+
+                    body:
+                        JSON.stringify({
+                            mode: mode,
+                            request_window:
+                                requestWindow,
+                            max_requests:
+                                maxRequests
+                        })
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+            throw new Error(
+                data.error ||
+                "Unable to save Bot Protection"
+            );
+        }
+
+        showMessage(
+            "Bot Protection policy saved for "
+            + domain,
+            true
+        );
+
+        await loadSiteBotProtection();
+
+    } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+            error.message ||
+            "Unable to save Bot Protection",
+            false
+        );
+    }
+}
+
+
+
+// ========================================================
+// LOAD RULES
+// ========================================================
+
+async function loadRules() {
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/rules"
+            );
+
+        const rules =
+            await response.json();
+
+
+        const container =
+            document.getElementById(
+                "rulesContainer"
+            );
+
+
+        container.innerHTML = "";
+
+
+        for (
+            const ruleName in rules
+        ) {
+
+            const rule =
+                rules[ruleName];
+
+
+            if (
+                !rule ||
+                typeof rule !== "object"
+            ) {
+
+                continue;
+            }
+
+
+            const control =
+                document.createElement(
+                    "div"
+                );
+
+            control.className =
+                "control";
+
+
+            control.innerHTML = `
+
+                <div class="control-info">
+
+                    <div class="control-name">
+                        ${formatRuleName(ruleName)}
+                    </div>
+
+                    <div class="description">
+                        Severity:
+                        ${rule.severity || "HIGH"}
+                    </div>
+
+                </div>
+
+                <label class="toggle">
+
+                    <input
+                        type="checkbox"
+                        ${rule.enabled ? "checked" : ""}
+                        onchange="toggleRule(
+                            '${ruleName}',
+                            this.checked
+                        )"
+                    >
+
+                    <span class="slider"></span>
+
+                </label>
+            `;
+
+
+            container.appendChild(
+                control
+            );
+        }
+
+
+    } catch (error) {
+
+        console.error(error);
+
+    }
+
+}
+
+
+// ========================================================
+// FORMAT RULE NAME
+// ========================================================
+
+function formatRuleName(name) {
+
+    return name
+        .toLowerCase()
+        .split("_")
+        .map(
+            word =>
+                word.charAt(0).toUpperCase()
+                + word.slice(1)
+        )
+        .join(" ");
+
+}
+
+
+// ========================================================
+// TOGGLE WAF RULE
+// ========================================================
+
+async function toggleRule(
+    ruleName,
+    enabled
+) {
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/admin/rules/"
+                + encodeURIComponent(ruleName),
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    credentials: "same-origin",
+
+                    body:
+                        JSON.stringify({
+                            enabled:
+                                enabled
+                        })
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+
+            showMessage(
+                data.error ||
+                "Unable to change rule",
+                false
+            );
+
+            await loadRules();
+
+            return;
+        }
+
+
+        showMessage(
+            formatRuleName(ruleName) +
+            (
+                enabled
+                    ? " enabled"
+                    : " disabled"
+            ),
+            true
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+            "Unable to connect to HAWK WAF",
+            false
+        );
+
+        await loadRules();
+    }
+
+}
+
+function showMessage(message, success) {
+
+    const element =
+        document.getElementById(
+            "securityMessage"
+        );
+
+    if (!element) {
+        return;
+    }
+
+    element.textContent =
+        message;
+
+    element.className =
+        success
+            ? "message success"
+            : "message error";
+
+    element.style.display =
+        "block";
+}
+
+
+// ========================================================
+// PROTECTED WEBSITE MANAGEMENT
+// ========================================================
+
+async function loadProtectedWebsites() {
+
+    const container =
+        document.getElementById(
+            "websitesContainer"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            "/api/admin/websites",
+            {
+                credentials: "same-origin"
+            }
+        );
+
+        const data =
+            await response.json();
+
+        if (
+            !response.ok ||
+            data.success !== true
+        ) {
+            throw new Error(
+                data.error ||
+                "Unable to load protected websites"
+            );
+        }
+
+        const websites =
+            data.websites || [];
+
+        if (!websites.length) {
+
+            container.innerHTML =
+                '<p class="description">' +
+                'No protected websites registered.' +
+                '</p>';
+
+            return;
+        }
+
+        container.innerHTML =
+            websites.map(
+                website => {
+
+                    const status =
+                        website.enabled
+                            ? "Enabled"
+                            : "Disabled";
+
+                    const action =
+                        website.enabled
+                            ? "Disable"
+                            : "Enable";
+
+                    return `
+                        <div style="
+                            margin-top:12px;
+                            padding:16px;
+                            border:1px solid #333;
+                            border-radius:6px;
+                            background:#111;
+                        ">
+
+                            <div style="
+                                display:flex;
+                                justify-content:space-between;
+                                align-items:center;
+                                gap:20px;
+                                flex-wrap:wrap;
+                            ">
+
+                                <div>
+
+                                    <div style="
+                                        font-size:17px;
+                                        font-weight:bold;
+                                        margin-bottom:6px;
+                                    ">
+                                        ${escapeHtml(
+                                            website.domain
+                                        )}
+                                    </div>
+
+                                    <div class="description">
+                                        Origin:
+                                        ${escapeHtml(
+                                            website.origin
+                                        )}
+                                    </div>
+
+                                    <div
+                                        style="
+                                            margin-top:7px;
+                                            font-size:13px;
+                                        "
+                                    >
+                                        Status:
+                                        <strong>
+                                            ${status}
+                                        </strong>
+                                    </div>
+
+                                </div>
+
+
+                                <div style="
+                                    display:flex;
+                                    gap:8px;
+                                    flex-wrap:wrap;
+                                ">
+
+                                    <button
+                                        type="button"
+                                        onclick="toggleProtectedWebsite(
+                                            '${escapeJs(
+                                                website.domain
+                                            )}'
+                                        )"
+                                        style="
+                                            padding:8px 14px;
+                                            background:#222;
+                                            color:#fff;
+                                            border:1px solid #555;
+                                            border-radius:5px;
+                                            cursor:pointer;
+                                        "
+                                    >
+                                        ${action}
+                                    </button>
+
+
+                                    <button
+                                        type="button"
+                                        onclick="removeProtectedWebsite(
+                                            '${escapeJs(
+                                                website.domain
+                                            )}'
+                                        )"
+                                        style="
+                                            padding:8px 14px;
+                                            background:#600;
+                                            color:#fff;
+                                            border:1px solid #f33;
+                                            border-radius:5px;
+                                            cursor:pointer;
+                                        "
+                                    >
+                                        Remove
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                    `;
+                }
+            ).join("");
+
+    } catch (error) {
+
+        console.error(error);
+
+        container.innerHTML =
+            '<p class="message error">' +
+            escapeHtml(
+                error.message ||
+                "Unable to load protected websites"
+            ) +
+            '</p>';
+    }
+}
+
+
+function escapeHtml(value) {
+
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+
+function escapeJs(value) {
+
+    return String(value)
+        .replaceAll("\\", "\\\\")
+        .replaceAll("'", "\\'");
+}
+
+
+async function addProtectedWebsite() {
+
+    const domainElement =
+        document.getElementById(
+            "websiteDomain"
+        );
+
+    const originElement =
+        document.getElementById(
+            "websiteOrigin"
+        );
+
+    if (
+        !domainElement ||
+        !originElement
+    ) {
+        return;
+    }
+
+    const domain =
+        domainElement.value.trim();
+
+    const origin =
+        originElement.value.trim();
+
+    if (!domain) {
+
+        showMessage(
+            "Website domain is required",
+            false
+        );
+
+        return;
+    }
+
+    if (!origin) {
+
+        showMessage(
+            "Origin server URL is required",
+            false
+        );
+
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            "/api/admin/websites",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                credentials:
+                    "same-origin",
+
+                body:
+                    JSON.stringify({
+                        domain: domain,
+                        origin: origin
+                    })
+            }
+        );
+
+        const data =
+            await response.json();
+
+        if (
+            !response.ok ||
+            data.success !== true
+        ) {
+            throw new Error(
+                data.error ||
+                "Unable to add website"
+            );
+        }
+
+        domainElement.value = "";
+        originElement.value = "";
+
+        showMessage(
+            "Website added successfully",
+            true
+        );
+
+        await loadProtectedWebsites();
+
+    } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+            error.message ||
+            "Unable to add website",
+            false
+        );
+    }
+}
+
+
+async function toggleProtectedWebsite(
+    domain
+) {
+
+    const confirmed = confirm(
+        "Change protection status for " +
+        domain +
+        "?"
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            "/api/admin/websites/" +
+            encodeURIComponent(domain) +
+            "/toggle",
+            {
+                method: "POST",
+                credentials: "same-origin"
+            }
+        );
+
+        const data =
+            await response.json();
+
+        if (
+            !response.ok ||
+            data.success !== true
+        ) {
+            throw new Error(
+                data.error ||
+                "Unable to change website status"
+            );
+        }
+
+        showMessage(
+            domain +
+            " is now " +
+            (
+                data.enabled
+                    ? "enabled"
+                    : "disabled"
+            ),
+            true
+        );
+
+        await loadProtectedWebsites();
+
+    } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+            error.message ||
+            "Unable to change website status",
+            false
+        );
+    }
+}
+
+
+async function removeProtectedWebsite(
+    domain
+) {
+
+    const confirmed = confirm(
+        "WARNING: Remove " +
+        domain +
+        " from HAWK WAF?\\n\\n" +
+        "Traffic for this domain will no longer be protected."
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            "/api/admin/websites/" +
+            encodeURIComponent(domain),
+            {
+                method: "DELETE",
+                credentials: "same-origin"
+            }
+        );
+
+        const data =
+            await response.json();
+
+        if (
+            !response.ok ||
+            data.success !== true
+        ) {
+            throw new Error(
+                data.error ||
+                "Unable to remove website"
+            );
+        }
+
+        showMessage(
+            domain +
+            " removed successfully",
+            true
+        );
+
+        await loadProtectedWebsites();
+
+    } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+            error.message ||
+            "Unable to remove website",
+            false
+        );
+    }
+}
+
+
+// ========================================================
+// SECURITY LOG MANAGEMENT
+// ========================================================
+
+async function clearSecurityLogs() {
+
+    const confirmed = confirm(
+        "WARNING: This will permanently clear all HAWK WAF security logs.\\n\\n" +
+        "The Admin Audit Log will NOT be deleted.\\n\\n" +
+        "Do you want to continue?"
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            "/api/admin/clear-logs",
+            {
+                method: "POST",
+                credentials: "same-origin"
+            }
+        );
+
+        const data = await response.json();
+
+        if (
+            !response.ok ||
+            data.success !== true
+        ) {
+            throw new Error(
+                data.error ||
+                "Unable to clear security logs"
+            );
+        }
+
+        showMessage(
+            "Security logs cleared successfully. " +
+            data.removed +
+            " event(s) removed.",
+            true
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+            error.message ||
+            "Unable to clear security logs",
+            false
+        );
+    }
+}
+
+
+// ========================================================
+// INITIALIZE
+// ========================================================
+
+async function initialize() {
+
+    const authenticated =
+        await checkAuthentication();
+
+
+    if (!authenticated) {
+
+        return;
+    }
+
+
+    await loadConfiguration();
+
+    await loadRules();
+
+    await initializeSiteWafRules();
+
+    await initializeSiteBotProtection();
+
+    await initializeSiteBrowserVerification();
+
+}
+
+
+initialize();
+
+
+</script>
+
+
+</body>
+
+</html>

@@ -1,0 +1,73 @@
+{
+    "SQL_INJECTION": {
+        "enabled": true,
+        "severity": "HIGH",
+        "patterns": [
+            "\\bunion\\s+select\\b",
+            "\\bor\\s+['\"]?1['\"]?\\s*=\\s*['\"]?1['\"]?\\b",
+            "\\band\\s+['\"]?1['\"]?\\s*=\\s*['\"]?1['\"]?\\b",
+            "\\bsleep\\s*\\(",
+            "\\bbenchmark\\s*\\(",
+            "\\bselect\\s+.*\\s+from\\b",
+            "information_schema"
+        ]
+    },
+    "XSS": {
+        "enabled": true,
+        "severity": "HIGH",
+        "patterns": [
+            "<script",
+            "</script",
+            "javascript:",
+            "onerror=",
+            "onload=",
+            "onclick=",
+            "onmouseover=",
+            "<iframe",
+            "<svg"
+        ]
+    },
+    "PATH_TRAVERSAL": {
+        "enabled": true,
+        "severity": "HIGH",
+        "patterns": [
+            "\\.\\./",
+            "\\.\\.\\\\",
+            "%2e%2e%2f",
+            "%2e%2e/",
+            "..%2f",
+            "%2e%2e%5c"
+        ]
+    },
+    "COMMAND_INJECTION": {
+        "enabled": true,
+        "severity": "HIGH",
+        "patterns": [
+            ";\\s*(whoami|id|uname|cat|ls)\\b",
+            "\\|\\s*(whoami|id|uname|cat|ls)\\b",
+            "&&\\s*(whoami|id|uname|cat|ls)\\b",
+            "`\\s*(whoami|id|uname|cat|ls)\\s*`",
+            "\\$\\(\\s*(whoami|id|uname|cat|ls)"
+        ]
+    },
+    "SUSPICIOUS_FILE_ACCESS": {
+        "enabled": true,
+        "severity": "HIGH",
+        "patterns": [
+            "/etc/passwd",
+            "/etc/shadow",
+            "win.ini",
+            "boot.ini"
+        ]
+    },
+    "HEADER_INJECTION": {
+        "enabled": true,
+        "severity": "HIGH",
+        "patterns": [
+            "\\r\\n",
+            "%0d%0a",
+            "\\n\\n",
+            "\\r\\r"
+        ]
+    }
+}

@@ -1,0 +1,148 @@
+{
+    "waf": {
+        "name": "HAWK WAF",
+        "host": "127.0.0.1",
+        "port": 8080
+    },
+    "backend": {
+        "host": "127.0.0.1",
+        "port": 5001
+    },
+    "dashboard": {
+        "host": "127.0.0.1",
+        "port": 9000
+    },
+    "rate_limit": {
+        "enabled": true,
+        "max_requests": 20,
+        "window_seconds": 10
+    },
+    "challenge": {
+        "enabled": true,
+        "mode": "always",
+        "token_lifetime": 300
+    },
+    "bot_protection": {
+        "enabled": true,
+        "mode": "challenge",
+        "request_window": 10,
+        "max_requests": 30
+    },
+    "admin": {
+        "enabled": true,
+        "username": "admin",
+        "session_lifetime": 3600
+    },
+    "logging": {
+        "enabled": true,
+        "log_file": "logs/waf_events.json"
+    },
+    "websites": {
+        "example.local": {
+            "origin": "http://127.0.0.1:5001",
+            "enabled": true,
+            "rate_limit": {
+                "enabled": true,
+                "max_requests": 20,
+                "window_seconds": 10
+            },
+            "bot_protection": {
+                "enabled": true,
+                "mode": "challenge",
+                "request_window": 10,
+                "max_requests": 30
+            },
+            "browser_verification": {
+                "enabled": false,
+                "mode": "suspicious",
+                "token_lifetime": 300
+            },
+            "request_security": {
+                "max_body_size": 1048576,
+                "allowed_methods": [
+                    "GET",
+                    "POST",
+                    "PUT",
+                    "PATCH",
+                    "DELETE",
+                    "OPTIONS",
+                    "HEAD"
+                ],
+                "upstream_timeout": 10
+            },
+            "security_headers": {
+                "enabled": true,
+                "x_content_type_options": "nosniff",
+                "x_frame_options": "DENY",
+                "referrer_policy": "strict-origin-when-cross-origin",
+                "permissions_policy": "camera=(), microphone=(), geolocation=()",
+                "strict_transport_security": ""
+            }
+        },
+        "test.local": {
+            "origin": "http://127.0.0.1:5001",
+            "enabled": true,
+            "rate_limit": {
+                "enabled": true,
+                "max_requests": 3,
+                "window_seconds": 10
+            },
+            "bot_protection": {
+                "enabled": true,
+                "mode": "challenge",
+                "request_window": 10,
+                "max_requests": 3
+            },
+            "browser_verification": {
+                "enabled": true,
+                "mode": "always",
+                "token_lifetime": 300
+            },
+            "waf_rules": {
+                "XSS": {
+                    "enabled": false
+                }
+            },
+            "request_security": {
+                "max_body_size": 524288,
+                "allowed_methods": [
+                    "GET",
+                    "POST",
+                    "OPTIONS",
+                    "HEAD"
+                ],
+                "upstream_timeout": 5
+            },
+            "security_headers": {
+                "enabled": true,
+                "x_content_type_options": "nosniff",
+                "x_frame_options": "DENY",
+                "referrer_policy": "strict-origin-when-cross-origin",
+                "permissions_policy": "camera=(), microphone=(), geolocation=()",
+                "strict_transport_security": ""
+            }
+        }
+    },
+    "request_security": {
+        "max_body_size": 1048576,
+        "allowed_methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+            "OPTIONS",
+            "HEAD"
+        ],
+        "upstream_timeout": 10
+    },
+    "origin_security": {
+        "enabled": true,
+        "allow_private_origins": true,
+        "block_metadata_ips": true,
+        "allowed_schemes": [
+            "http",
+            "https"
+        ]
+    }
+}

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>HAWK Security Check</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+
+            margin: 0;
+
+            min-height: 100vh;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            background: #080808;
+
+            color: #eeeeee;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+        }
+
+
+        .container {
+
+            width: 90%;
+
+            max-width: 520px;
+
+            padding: 45px;
+
+            background: #111111;
+
+            border: 1px solid #333333;
+
+            border-radius: 12px;
+
+            text-align: center;
+
+            box-shadow:
+                0 0 30px
+                rgba(255, 40, 40, 0.12);
+
+        }
+
+
+        .logo {
+
+            font-size: 42px;
+
+            font-weight: bold;
+
+            letter-spacing: 4px;
+
+            color: #ff3333;
+
+            margin-bottom: 10px;
+
+        }
+
+
+        h1 {
+
+            margin: 10px 0;
+
+            font-size: 25px;
+
+        }
+
+
+        .description {
+
+            color: #999999;
+
+            line-height: 1.6;
+
+            margin-bottom: 30px;
+
+        }
+
+
+        .verification {
+
+            padding: 18px;
+
+            background: #181818;
+
+            border: 1px solid #292929;
+
+            border-radius: 8px;
+
+        }
+
+
+        .spinner {
+
+            width: 32px;
+
+            height: 32px;
+
+            margin: 0 auto 15px;
+
+            border: 3px solid #333333;
+
+            border-top-color: #ff3333;
+
+            border-radius: 50%;
+
+            animation:
+                spin 0.8s linear infinite;
+
+        }
+
+
+        .status {
+
+            color: #dddddd;
+
+            font-size: 15px;
+
+        }
+
+
+        .success {
+
+            color: #55dd88;
+
+        }
+
+
+        .error {
+
+            color: #ff5555;
+
+        }
+
+
+        @keyframes spin {
+
+            to {
+                transform: rotate(360deg);
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+    <div class="container">
+
+        <div class="logo">
+            HAWK
+        </div>
+
+        <h1>
+            Security Verification
+        </h1>
+
+        <p class="description">
+
+            HAWK WAF is verifying your browser
+            before allowing access to this website.
+
+        </p>
+
+
+        <div class="verification">
+
+            <div
+                id="spinner"
+                class="spinner"
+            ></div>
+
+            <div
+                id="status"
+                class="status"
+            >
+                Verifying browser...
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <script>
+
+        /*
+         * HAWK Browser Challenge
+         *
+         * This intentionally performs a simple
+         * browser-side computation.
+         *
+         * The server must independently validate
+         * the resulting challenge before granting
+         * access.
+         */
+
+
+        async function runChallenge() {
+
+            const status =
+                document.getElementById(
+                    "status"
+                );
+
+
+            try {
+
+                /*
+                 * Confirm JavaScript execution.
+                 */
+
+                const browserProof =
+                    "HAWK-" +
+                    navigator.userAgent.length +
+                    "-" +
+                    screen.width +
+                    "x" +
+                    screen.height;
+
+
+                /*
+                 * Create a SHA-256 digest.
+                 */
+
+                const encoder =
+                    new TextEncoder();
+
+
+                const data =
+                    encoder.encode(
+                        browserProof
+                    );
+
+
+                const hashBuffer =
+                    await crypto.subtle.digest(
+                        "SHA-256",
+                        data
+                    );
+
+
+                const hashArray =
+                    Array.from(
+                        new Uint8Array(
+                            hashBuffer
+                        )
+                    );
+
+
+                const hash =
+                    hashArray
+                        .map(
+                            byte =>
+                                byte
+                                    .toString(16)
+                                    .padStart(
+                                        2,
+                                        "0"
+                                    )
+                        )
+                        .join("");
+
+
+                /*
+                 * Send the browser proof to HAWK.
+                 */
+
+                const response =
+                    await fetch(
+                        "/__hawk_verify",
+                        {
+
+                            method: "POST",
+
+                            headers: {
+
+                                "Content-Type":
+                                    "application/json"
+
+                            },
+
+                            body:
+                                JSON.stringify({
+
+                                    proof:
+                                        hash
+
+                                })
+
+                        }
+                    );
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        "Verification failed"
+                    );
+
+                }
+
+
+                const result =
+                    await response.json();
+
+
+                if (
+                    result.verified === true
+                ) {
+
+                    status.textContent =
+                        "Verification successful. Redirecting...";
+
+                    status.className =
+                        "status success";
+
+
+                    setTimeout(
+                        function () {
+
+                            window.location.href =
+                                result.redirect;
+
+                        },
+                        500
+                    );
+
+                }
+
+                else {
+
+                    throw new Error(
+                        "Browser verification rejected"
+                    );
+
+                }
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    error
+                );
+
+
+                status.textContent =
+                    "Verification failed.";
+
+                status.className =
+                    "status error";
+
+
+                document.getElementById(
+                    "spinner"
+                ).style.display =
+                    "none";
+
+            }
+
+        }
+
+
+        runChallenge();
+
+    </script>
+
+</body>
+
+</html>

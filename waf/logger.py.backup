@@ -1,0 +1,89 @@
+import json
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+LOG_FILE = Path(
+    "logs/waf_events.json"
+)
+
+
+def generate_event_id():
+
+    return (
+        "HAWK-"
+        + uuid.uuid4()
+        .hex[:12]
+        .upper()
+    )
+
+
+def log_event(
+    source_ip,
+    method,
+    path,
+    rule,
+    severity,
+    action,
+    user_agent="",
+    status_code=None,
+    processing_time_ms=None,
+    request_size=0,
+    matched_pattern=None
+):
+
+    event = {
+
+        "event_id": generate_event_id(),
+
+        "timestamp": datetime.now(
+            timezone.utc
+        ).isoformat(),
+
+        "source_ip": source_ip,
+
+        "method": method,
+
+        "path": path,
+
+        "rule": rule,
+
+        "matched_pattern": (
+            matched_pattern
+        ),
+
+        "severity": severity,
+
+        "action": action,
+
+        "status_code": status_code,
+
+        "processing_time_ms": (
+            processing_time_ms
+        ),
+
+        "request_size_bytes": (
+            request_size
+        ),
+
+        "user_agent": user_agent
+    }
+
+    LOG_FILE.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    with open(
+        LOG_FILE,
+        "a",
+        encoding="utf-8"
+    ) as file:
+
+        file.write(
+            json.dumps(event)
+            + "\n"
+        )
+
+    return event

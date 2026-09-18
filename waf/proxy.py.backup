@@ -1,0 +1,2026 @@
+from flask import Flask, request, Response, jsonify
+import requests
+import time
+import secrets
+
+from waf.config import HAWKConfig
+from waf.detector import WAFDetector
+from waf.logger import log_event
+from waf.rate_limit import RateLimiter
+from waf.challenge import HAWKChallenge
+
+
+# =========================================
+# HAWK CONFIGURATION
+# =========================================
+
+config = HAWKConfig()
+
+
+WAF_HOST = config.get(
+    "waf",
+    "host",
+    "127.0.0.1"
+)
+
+WAF_PORT = config.get(
+    "waf",
+    "port",
+    8080
+)
+
+
+BACKEND_HOST = config.get(
+    "backend",
+    "host",
+    "127.0.0.1"
+)
+
+BACKEND_PORT = config.get(
+    "backend",
+    "port",
+    5001
+)
+
+
+BACKEND = (
+    f"http://{BACKEND_HOST}:{BACKEND_PORT}"
+)
+
+
+# =========================================
+# RATE LIMIT CONFIGURATION
+# =========================================
+
+RATE_LIMIT_ENABLED = config.get(
+    "rate_limit",
+    "enabled",
+    True
+)
+
+RATE_LIMIT_MAX = config.get(
+    "rate_limit",
+    "max_requests",
+    20
+)
+
+RATE_LIMIT_WINDOW = config.get(
+    "rate_limit",
+    "window_seconds",
+    10
+)
+
+
+# =========================================
+# CHALLENGE CONFIGURATION
+# =========================================
+
+CHALLENGE_ENABLED = config.get(
+    "challenge",
+    "enabled",
+    True
+)
+
+CHALLENGE_MODE = config.get(
+    "challenge",
+    "mode",
+    "suspicious"
+)
+
+CHALLENGE_TOKEN_LIFETIME = config.get(
+    "challenge",
+    "token_lifetime",
+    300
+)
+
+CHALLENGE_SECRET = config.get(
+    "challenge",
+    "secret",
+    None
+)
+
+
+# =========================================
+# FLASK
+# =========================================
+
+app = Flask(__name__)
+
+
+# =========================================
+# SECURITY COMPONENTS
+# =========================================
+
+detector = WAFDetector()
+
+
+rate_limiter = RateLimiter(
+    max_requests=RATE_LIMIT_MAX,
+    window_seconds=RATE_LIMIT_WINDOW
+)
+
+
+challenge_engine = HAWKChallenge(
+    secret=CHALLENGE_SECRET,
+    token_lifetime=CHALLENGE_TOKEN_LIFETIME
+)
+
+
+# =========================================
+# SECURITY RESPONSE HEADERS
+# =========================================
+
+SECURITY_HEADERS = {
+
+    "X-Content-Type-Options":
+        "nosniff",
+
+    "X-Frame-Options":
+        "DENY",
+
+    "Content-Security-Policy":
+        "default-src 'self'",
+
+    "Referrer-Policy":
+        "strict-origin-when-cross-origin",
+
+    "Permissions-Policy":
+        "camera=(), microphone=(), geolocation=()"
+
+}
+
+
+def add_security_headers(headers):
+
+    for header_name, header_value in (
+        SECURITY_HEADERS.items()
+    ):
+
+        headers[header_name] = header_value
+
+    return headers
+
+
+# =========================================
+# SAFE REDIRECT
+# =========================================
+
+def get_safe_redirect():
+
+    redirect = request.args.get(
+        "redirect",
+        "/"
+    )
+
+
+    if not isinstance(
+        redirect,
+        str
+    ):
+
+        return "/"
+
+
+    if not redirect.startswith("/"):
+
+        return "/"
+
+
+    if redirect.startswith("//"):
+
+        return "/"
+
+
+    return redirect
+
+
+# =========================================
+# HAWK CHALLENGE PAGE
+# =========================================
+
+@app.route(
+    "/__hawk_challenge",
+    methods=["GET"]
+)
+def hawk_challenge():
+
+    redirect = get_safe_redirect()
+
+
+    # -------------------------------------
+    # Generate CSP nonce
+    # -------------------------------------
+
+    script_nonce = (
+        secrets.token_urlsafe(16)
+    )
+
+
+    # -------------------------------------
+    # Create signed challenge
+    # -------------------------------------
+
+    challenge = (
+        challenge_engine.create_challenge(
+            redirect
+        )
+    )
+
+
+    challenge_token = (
+        challenge_engine.create_token(
+            challenge
+        )
+    )
+
+
+    # -------------------------------------
+    # Challenge HTML
+    # -------------------------------------
+
+    html = f"""
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        HAWK Security Check
+    </title>
+
+
+    <style>
+
+        * {{
+            box-sizing: border-box;
+        }}
+
+
+        body {{
+
+            margin: 0;
+
+            min-height: 100vh;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            background: #080808;
+
+            color: #eeeeee;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+        }}
+
+
+        .container {{
+
+            width: 90%;
+
+            max-width: 520px;
+
+            padding: 45px;
+
+            background: #111111;
+
+            border: 1px solid #333333;
+
+            border-radius: 12px;
+
+            text-align: center;
+
+            box-shadow:
+                0 0 30px
+                rgba(255, 40, 40, 0.12);
+
+        }}
+
+
+        .logo {{
+
+            font-size: 42px;
+
+            font-weight: bold;
+
+            letter-spacing: 4px;
+
+            color: #ff3333;
+
+            margin-bottom: 10px;
+
+        }}
+
+
+        h1 {{
+
+            margin: 10px 0;
+
+            font-size: 25px;
+
+        }}
+
+
+        .description {{
+
+            color: #999999;
+
+            line-height: 1.6;
+
+            margin-bottom: 30px;
+
+        }}
+
+
+        .verification {{
+
+            padding: 18px;
+
+            background: #181818;
+
+            border: 1px solid #292929;
+
+            border-radius: 8px;
+
+        }}
+
+
+        .spinner {{
+
+            width: 32px;
+
+            height: 32px;
+
+            margin: 0 auto 15px;
+
+            border: 3px solid #333333;
+
+            border-top-color: #ff3333;
+
+            border-radius: 50%;
+
+            animation:
+                spin 0.8s linear infinite;
+
+        }}
+
+
+        .status {{
+
+            color: #dddddd;
+
+            font-size: 15px;
+
+        }}
+
+
+        .success {{
+
+            color: #55dd88;
+
+        }}
+
+
+        .error {{
+
+            color: #ff5555;
+
+        }}
+
+
+        @keyframes spin {{
+
+            to {{
+                transform: rotate(360deg);
+            }}
+
+        }}
+
+    </style>
+
+</head>
+
+
+<body>
+
+    <div class="container">
+
+        <div class="logo">
+            HAWK
+        </div>
+
+
+        <h1>
+            Security Verification
+        </h1>
+
+
+        <p class="description">
+
+            HAWK WAF is verifying your browser
+            before allowing access to this website.
+
+        </p>
+
+
+        <div class="verification">
+
+            <div
+                id="spinner"
+                class="spinner"
+            ></div>
+
+
+            <div
+                id="status"
+                class="status"
+            >
+                Verifying browser...
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <script nonce="{script_nonce}">
+
+        async function runChallenge() {{
+
+            const status =
+                document.getElementById(
+                    "status"
+                );
+
+
+            try {{
+
+                /*
+                 * Browser execution proof.
+                 *
+                 * This demonstrates that JavaScript
+                 * executed in the client browser.
+                 */
+
+                const browserProof =
+                    "HAWK-" +
+                    navigator.userAgent.length +
+                    "-" +
+                    screen.width +
+                    "x" +
+                    screen.height;
+
+
+                const encoder =
+                    new TextEncoder();
+
+
+                const data =
+                    encoder.encode(
+                        browserProof
+                    );
+
+
+                /*
+                 * Generate SHA-256 hash.
+                 */
+
+                const hashBuffer =
+                    await crypto.subtle.digest(
+                        "SHA-256",
+                        data
+                    );
+
+
+                const hashArray =
+                    Array.from(
+                        new Uint8Array(
+                            hashBuffer
+                        )
+                    );
+
+
+                const hash =
+                    hashArray
+                        .map(
+                            byte =>
+                                byte
+                                    .toString(16)
+                                    .padStart(
+                                        2,
+                                        "0"
+                                    )
+                        )
+                        .join("");
+
+
+                /*
+                 * Send verification request.
+                 */
+
+                const response =
+                    await fetch(
+                        "/__hawk_verify",
+                        {{
+
+                            method: "POST",
+
+                            headers: {{
+
+                                "Content-Type":
+                                    "application/json"
+
+                            }},
+
+                            body:
+                                JSON.stringify({{
+
+                                    proof:
+                                        hash,
+
+                                    challenge:
+                                        "{challenge_token}"
+
+                                }})
+
+                        }}
+                    );
+
+
+                if (!response.ok) {{
+
+                    throw new Error(
+                        "Verification failed"
+                    );
+
+                }}
+
+
+                const result =
+                    await response.json();
+
+
+                if (
+                    result.verified === true
+                ) {{
+
+                    status.textContent =
+                        "Verification successful. Redirecting...";
+
+
+                    status.className =
+                        "status success";
+
+
+                    setTimeout(
+                        function () {{
+
+                            window.location.href =
+                                result.redirect;
+
+                        }},
+                        500
+                    );
+
+                }}
+
+                else {{
+
+                    throw new Error(
+                        "Browser verification rejected"
+                    );
+
+                }}
+
+            }}
+
+            catch (error) {{
+
+                console.error(
+                    error
+                );
+
+
+                status.textContent =
+                    "Verification failed.";
+
+
+                status.className =
+                    "status error";
+
+
+                document.getElementById(
+                    "spinner"
+                ).style.display =
+                    "none";
+
+            }}
+
+        }}
+
+
+        runChallenge();
+
+    </script>
+
+</body>
+
+</html>
+"""
+
+
+    response = Response(
+
+        html,
+
+        status=200,
+
+        content_type="text/html"
+
+    )
+
+
+    # -------------------------------------
+    # Challenge-specific CSP
+    # -------------------------------------
+
+    add_security_headers(
+        response.headers
+    )
+
+
+    response.headers[
+        "Content-Security-Policy"
+    ] = (
+
+        "default-src 'self'; "
+
+        f"script-src 'self' "
+        f"'nonce-{script_nonce}'; "
+
+        "style-src 'self' 'unsafe-inline'"
+    )
+
+
+    return response
+
+
+# =========================================
+# HAWK CHALLENGE VERIFICATION
+# =========================================
+
+@app.route(
+    "/__hawk_verify",
+    methods=["POST"]
+)
+def hawk_verify():
+
+    data = request.get_json(
+        silent=True
+    )
+
+
+    if not isinstance(
+        data,
+        dict
+    ):
+
+        return jsonify({
+
+            "verified": False,
+
+            "error":
+                "Invalid verification request"
+
+        }), 400
+
+
+    challenge_token = data.get(
+        "challenge",
+        ""
+    )
+
+
+    proof = data.get(
+        "proof",
+        ""
+    )
+
+
+    # -------------------------------------
+    # Validate challenge token
+    # -------------------------------------
+
+    if not challenge_token:
+
+        return jsonify({
+
+            "verified": False,
+
+            "error":
+                "Missing challenge"
+
+        }), 400
+
+
+    challenge = (
+        challenge_engine.verify_token(
+            challenge_token
+        )
+    )
+
+
+    if not challenge:
+
+        return jsonify({
+
+            "verified": False,
+
+            "error":
+                "Challenge expired or invalid"
+
+        }), 403
+
+
+    # -------------------------------------
+    # Validate browser proof
+    # -------------------------------------
+
+    if not isinstance(
+        proof,
+        str
+    ):
+
+        return jsonify({
+
+            "verified": False,
+
+            "error":
+                "Invalid browser proof"
+
+        }), 403
+
+
+    if len(proof) != 64:
+
+        return jsonify({
+
+            "verified": False,
+
+            "error":
+                "Invalid browser proof"
+
+        }), 403
+
+
+    try:
+
+        int(
+            proof,
+            16
+        )
+
+    except ValueError:
+
+        return jsonify({
+
+            "verified": False,
+
+            "error":
+                "Invalid browser proof"
+
+        }), 403
+
+
+    # -------------------------------------
+    # Create access token
+    # -------------------------------------
+
+    access_token = (
+        challenge_engine.create_token(
+            challenge
+        )
+    )
+
+
+    redirect = challenge.get(
+        "redirect",
+        "/"
+    )
+
+
+    # -------------------------------------
+    # Verification response
+    # -------------------------------------
+
+    response = jsonify({
+
+        "verified": True,
+
+        "redirect": redirect
+
+    })
+
+
+    # -------------------------------------
+    # Temporary challenge cookie
+    # -------------------------------------
+
+    response.set_cookie(
+
+        "HAWK_CHALLENGE",
+
+        access_token,
+
+        max_age=CHALLENGE_TOKEN_LIFETIME,
+
+        httponly=True,
+
+        secure=False,
+
+        samesite="Lax",
+
+        path="/"
+
+    )
+
+
+    add_security_headers(
+        response.headers
+    )
+
+
+    return response
+
+
+# =========================================
+# MAIN PROXY ROUTES
+# =========================================
+
+@app.route(
+    "/",
+    defaults={"path": ""},
+    methods=[
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH"
+    ]
+)
+
+@app.route(
+    "/<path:path>",
+    methods=[
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH"
+    ]
+)
+
+def proxy(path):
+
+    start_time = time.perf_counter()
+
+
+    # =====================================
+    # CLIENT INFORMATION
+    # =====================================
+
+    source_ip = (
+        request.remote_addr
+        or "unknown"
+    )
+
+
+    user_agent = request.headers.get(
+        "User-Agent",
+        ""
+    )
+
+
+    # =====================================
+    # PREVENT INTERNAL ROUTE HANDLING
+    # =====================================
+
+    if path.startswith(
+        "__hawk_"
+    ):
+
+        return Response(
+            "Not Found",
+            status=404
+        )
+
+
+    # =====================================
+    # CHALLENGE COOKIE
+    # =====================================
+
+    challenge_cookie = (
+        request.cookies.get(
+            "HAWK_CHALLENGE"
+        )
+    )
+
+
+    challenge_valid = (
+
+        challenge_engine.verify_token(
+            challenge_cookie
+        )
+
+        if challenge_cookie
+
+        else False
+
+    )
+
+
+    # =====================================
+    # REQUEST BODY
+    # =====================================
+
+    raw_body = request.get_data()
+
+
+    body = raw_body.decode(
+        "utf-8",
+        errors="ignore"
+    )
+
+
+    request_size = len(
+        raw_body
+    )
+
+
+    # =====================================
+    # RATE LIMITING
+    # =====================================
+
+    if RATE_LIMIT_ENABLED:
+
+        if not rate_limiter.is_allowed(
+            source_ip
+        ):
+
+            processing_time = (
+
+                time.perf_counter()
+                - start_time
+
+            ) * 1000
+
+
+            log_event(
+
+                source_ip=source_ip,
+
+                method=request.method,
+
+                path=request.full_path,
+
+                rule="RATE_LIMIT",
+
+                matched_pattern=None,
+
+                severity="MEDIUM",
+
+                action="BLOCK",
+
+                user_agent=user_agent,
+
+                status_code=429,
+
+                processing_time_ms=round(
+                    processing_time,
+                    3
+                ),
+
+                request_size=request_size
+
+            )
+
+
+            response = Response(
+
+                """
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>
+        HAWK WAF - Rate Limited
+    </title>
+
+</head>
+
+
+<body
+style="
+background:#111;
+color:#eee;
+font-family:Arial;
+text-align:center;
+padding-top:100px;
+">
+
+    <h1
+    style="color:#ffaa33;">
+
+        Too Many Requests
+
+    </h1>
+
+
+    <p>
+
+        HAWK WAF temporarily blocked
+        this request because the configured
+        request-rate limit was exceeded.
+
+    </p>
+
+
+    <p>
+        HTTP 429
+    </p>
+
+</body>
+
+</html>
+                """,
+
+                status=429,
+
+                content_type="text/html"
+
+            )
+
+
+            add_security_headers(
+                response.headers
+            )
+
+
+            return response
+
+
+    # =====================================
+    # QUERY STRING
+    # =====================================
+
+    query_string = (
+
+        request.query_string.decode(
+            "utf-8",
+            errors="ignore"
+        )
+
+    )
+
+
+    # =====================================
+    # HEADER INSPECTION
+    # =====================================
+
+    inspected_headers = []
+
+
+    headers_to_inspect = [
+
+        "User-Agent",
+
+        "Host",
+
+        "Referer",
+
+        "Content-Type",
+
+        "X-Forwarded-For",
+
+        "X-Real-IP"
+
+    ]
+
+
+    for header_name in headers_to_inspect:
+
+        header_value = (
+            request.headers.get(
+                header_name,
+                ""
+            )
+        )
+
+
+        if header_value:
+
+            inspected_headers.append(
+
+                f"{header_name}: "
+                f"{header_value}"
+
+            )
+
+
+    header_data = " ".join(
+        inspected_headers
+    )
+
+
+    # =====================================
+    # BUILD REQUEST DATA
+    # =====================================
+
+    request_data = (
+
+        request.method
+
+        + " "
+
+        + request.path
+
+        + "?"
+
+        + query_string
+
+        + " "
+
+        + header_data
+
+        + " "
+
+        + body
+
+    )
+
+
+    # =====================================
+    # HAWK DETECTION ENGINE
+    # =====================================
+
+    result = detector.inspect(
+        request_data
+    )
+
+
+    print()
+    print("=" * 60)
+    print("HAWK WAF SECURITY EVENT")
+    print("=" * 60)
+
+
+    print(
+        "REQUEST    :",
+        request_data
+    )
+
+
+    print(
+        "SOURCE IP  :",
+        source_ip
+    )
+
+
+    print(
+        "RULE       :",
+        result.rule
+    )
+
+
+    print(
+        "SEVERITY   :",
+        result.severity
+    )
+
+
+    print(
+        "PATTERN    :",
+        result.matched_pattern
+    )
+
+
+    print(
+        "BLOCKED    :",
+        result.blocked
+    )
+
+
+    # =====================================
+    # MALICIOUS REQUEST
+    # =====================================
+
+    if result.blocked:
+
+        processing_time = (
+
+            time.perf_counter()
+            - start_time
+
+        ) * 1000
+
+
+        log_event(
+
+            source_ip=source_ip,
+
+            method=request.method,
+
+            path=request.full_path,
+
+            rule=result.rule,
+
+            matched_pattern=(
+                result.matched_pattern
+            ),
+
+            severity=result.severity,
+
+            action="BLOCK",
+
+            user_agent=user_agent,
+
+            status_code=403,
+
+            processing_time_ms=round(
+                processing_time,
+                3
+            ),
+
+            request_size=request_size
+
+        )
+
+
+        print(
+            "ACTION     : BLOCK"
+        )
+
+
+        print(
+            "STATUS     : 403"
+        )
+
+
+        print(
+            "TIME       :",
+            round(
+                processing_time,
+                3
+            ),
+            "ms"
+        )
+
+
+        print("=" * 60)
+
+
+        response = Response(
+
+            """
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>
+        HAWK WAF - Request Blocked
+    </title>
+
+</head>
+
+
+<body
+style="
+background:#090909;
+color:#eee;
+font-family:Arial;
+text-align:center;
+padding-top:100px;
+">
+
+    <div
+    style="
+    max-width:700px;
+    margin:auto;
+    padding:40px;
+    background:#151515;
+    border:1px solid #ff3333;
+    border-radius:10px;
+    ">
+
+        <h1
+        style="color:#ff3333;">
+
+            Request Blocked
+
+        </h1>
+
+
+        <p>
+
+            HAWK WAF detected a potentially
+            malicious request.
+
+        </p>
+
+
+        <p
+        style="color:#888;">
+
+            HTTP 403 - Forbidden
+
+        </p>
+
+    </div>
+
+</body>
+
+</html>
+            """,
+
+            status=403,
+
+            content_type="text/html"
+
+        )
+
+
+        add_security_headers(
+            response.headers
+        )
+
+
+        return response
+
+
+    # =====================================
+    # CHALLENGE DECISION
+    # =====================================
+
+    suspicious_request = False
+
+
+    if CHALLENGE_ENABLED:
+
+        if CHALLENGE_MODE == "always":
+
+            suspicious_request = True
+
+
+        elif CHALLENGE_MODE == "suspicious":
+
+            suspicious_request = (
+
+                user_agent.strip() == ""
+
+                or request.headers.get(
+                    "Accept",
+                    ""
+                ).strip() == ""
+
+            )
+
+
+    # =====================================
+    # ISSUE BROWSER CHALLENGE
+    # =====================================
+
+    if (
+
+        CHALLENGE_ENABLED
+
+        and suspicious_request
+
+        and not challenge_valid
+
+    ):
+
+        redirect = (
+            request.full_path
+            or "/"
+        )
+
+
+        challenge_url = (
+
+            "/__hawk_challenge"
+
+            + "?redirect="
+
+            + requests.utils.quote(
+                redirect,
+                safe="/?=&"
+            )
+
+        )
+
+
+        processing_time = (
+
+            time.perf_counter()
+            - start_time
+
+        ) * 1000
+
+
+        log_event(
+
+            source_ip=source_ip,
+
+            method=request.method,
+
+            path=request.full_path,
+
+            rule="BROWSER_CHALLENGE",
+
+            matched_pattern=None,
+
+            severity="MEDIUM",
+
+            action="CHALLENGE",
+
+            user_agent=user_agent,
+
+            status_code=403,
+
+            processing_time_ms=round(
+                processing_time,
+                3
+            ),
+
+            request_size=request_size
+
+        )
+
+
+        print(
+            "ACTION     : CHALLENGE"
+        )
+
+
+        print(
+            "STATUS     : 403"
+        )
+
+
+        print(
+            "CHALLENGE  : BROWSER VERIFICATION"
+        )
+
+
+        print(
+            "TIME       :",
+            round(
+                processing_time,
+                3
+            ),
+            "ms"
+        )
+
+
+        print("=" * 60)
+
+
+        response = Response(
+
+            f"""
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+    <meta
+        http-equiv="refresh"
+        content="0;url={challenge_url}"
+    >
+
+    <title>
+        HAWK Security Check
+    </title>
+
+</head>
+
+
+<body
+style="
+background:#090909;
+color:#eee;
+font-family:Arial;
+text-align:center;
+padding-top:100px;
+">
+
+    <h1
+    style="color:#ff3333;">
+
+        HAWK Security Check
+
+    </h1>
+
+
+    <p>
+
+        Redirecting to browser verification...
+
+    </p>
+
+</body>
+
+</html>
+            """,
+
+            status=403,
+
+            content_type="text/html"
+
+        )
+
+
+        add_security_headers(
+            response.headers
+        )
+
+
+        return response
+
+
+    # =====================================
+    # BACKEND URL
+    # =====================================
+
+    backend_url = (
+
+        BACKEND
+        + request.path
+
+    )
+
+
+    if query_string:
+
+        backend_url += (
+
+            "?"
+            + query_string
+
+        )
+
+
+    # =====================================
+    # FORWARD HEADERS
+    # =====================================
+
+    forward_headers = {}
+
+
+    hop_by_hop_headers = {
+
+        "host",
+
+        "content-length",
+
+        "connection",
+
+        "keep-alive",
+
+        "proxy-authenticate",
+
+        "proxy-authorization",
+
+        "te",
+
+        "trailers",
+
+        "transfer-encoding",
+
+        "upgrade"
+
+    }
+
+
+    for header_name, header_value in (
+        request.headers.items()
+    ):
+
+        if (
+            header_name.lower()
+            in hop_by_hop_headers
+        ):
+
+            continue
+
+
+        forward_headers[
+            header_name
+        ] = header_value
+
+
+    # =====================================
+    # SEND TO BACKEND
+    # =====================================
+
+    try:
+
+        response = requests.request(
+
+            method=request.method,
+
+            url=backend_url,
+
+            headers=forward_headers,
+
+            data=raw_body,
+
+            timeout=10
+
+        )
+
+
+        processing_time = (
+
+            time.perf_counter()
+            - start_time
+
+        ) * 1000
+
+
+        # =================================
+        # RESPONSE HEADERS
+        # =================================
+
+        excluded_response_headers = {
+
+            "content-encoding",
+
+            "transfer-encoding",
+
+            "connection",
+
+            "keep-alive",
+
+            "proxy-authenticate",
+
+            "proxy-authorization",
+
+            "te",
+
+            "trailers",
+
+            "upgrade"
+
+        }
+
+
+        response_headers = {
+
+            key: value
+
+            for key, value
+
+            in response.headers.items()
+
+            if key.lower()
+
+            not in excluded_response_headers
+
+        }
+
+
+        # =================================
+        # HAWK SECURITY HEADERS
+        # =================================
+
+        add_security_headers(
+            response_headers
+        )
+
+
+        # =================================
+        # ALLOW LOG
+        # =================================
+
+        log_event(
+
+            source_ip=source_ip,
+
+            method=request.method,
+
+            path=request.full_path,
+
+            rule=result.rule,
+
+            matched_pattern=(
+                result.matched_pattern
+            ),
+
+            severity="LOW",
+
+            action="ALLOW",
+
+            user_agent=user_agent,
+
+            status_code=response.status_code,
+
+            processing_time_ms=round(
+                processing_time,
+                3
+            ),
+
+            request_size=request_size
+
+        )
+
+
+        print(
+            "ACTION     : ALLOW"
+        )
+
+
+        print(
+            "STATUS     :",
+            response.status_code
+        )
+
+
+        print(
+            "TIME       :",
+            round(
+                processing_time,
+                3
+            ),
+            "ms"
+        )
+
+
+        print(
+            "SECURITY HEADERS: ENABLED"
+        )
+
+
+        print("=" * 60)
+
+
+        return Response(
+
+            response.content,
+
+            status=response.status_code,
+
+            headers=response_headers
+
+        )
+
+
+    # =====================================
+    # BACKEND ERROR
+    # =====================================
+
+    except requests.RequestException as error:
+
+        processing_time = (
+
+            time.perf_counter()
+            - start_time
+
+        ) * 1000
+
+
+        print(
+            "[!] Backend connection error:",
+            error
+        )
+
+
+        log_event(
+
+            source_ip=source_ip,
+
+            method=request.method,
+
+            path=request.full_path,
+
+            rule="BACKEND_ERROR",
+
+            matched_pattern=None,
+
+            severity="MEDIUM",
+
+            action="ERROR",
+
+            user_agent=user_agent,
+
+            status_code=502,
+
+            processing_time_ms=round(
+                processing_time,
+                3
+            ),
+
+            request_size=request_size
+
+        )
+
+
+        response = Response(
+
+            """
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>
+        HAWK WAF - Backend Error
+    </title>
+
+</head>
+
+
+<body
+style="
+background:#090909;
+color:#eee;
+font-family:Arial;
+text-align:center;
+padding-top:100px;
+">
+
+    <div
+    style="
+    max-width:700px;
+    margin:auto;
+    padding:40px;
+    background:#151515;
+    border:1px solid #ffaa33;
+    border-radius:10px;
+    ">
+
+        <h1
+        style="color:#ffaa33;">
+
+            Backend Unavailable
+
+        </h1>
+
+
+        <p>
+
+            HAWK WAF could not connect
+            to the protected backend.
+
+        </p>
+
+
+        <p
+        style="color:#888;">
+
+            HTTP 502 - Bad Gateway
+
+        </p>
+
+    </div>
+
+</body>
+
+</html>
+            """,
+
+            status=502,
+
+            content_type="text/html"
+
+        )
+
+
+        add_security_headers(
+            response.headers
+        )
+
+
+        return response
+
+
+# =========================================
+# START HAWK WAF
+# =========================================
+
+if __name__ == "__main__":
+
+    print()
+
+    print("=" * 60)
+
+
+    print(
+        "                    HAWK WAF"
+    )
+
+
+    print(
+        "          Web Application Firewall"
+    )
+
+
+    print("=" * 60)
+
+
+    print(
+        "WAF Proxy :",
+        f"http://{WAF_HOST}:{WAF_PORT}"
+    )
+
+
+    print(
+        "Backend   :",
+        BACKEND
+    )
+
+
+    print(
+        "Dashboard :",
+        "http://127.0.0.1:9000"
+    )
+
+
+    if RATE_LIMIT_ENABLED:
+
+        print(
+            "Rate Limit:",
+            f"{RATE_LIMIT_MAX} requests / "
+            f"{RATE_LIMIT_WINDOW} seconds"
+        )
+
+    else:
+
+        print(
+            "Rate Limit: DISABLED"
+        )
+
+
+    if CHALLENGE_ENABLED:
+
+        print(
+            "Challenge :",
+            CHALLENGE_MODE
+        )
+
+
+        print(
+            "Token TTL :",
+            f"{CHALLENGE_TOKEN_LIFETIME} seconds"
+        )
+
+    else:
+
+        print(
+            "Challenge : DISABLED"
+        )
+
+
+    print(
+        "Security Headers: ENABLED"
+    )
+
+
+    print("=" * 60)
+
+
+    app.run(
+
+        host=WAF_HOST,
+
+        port=WAF_PORT,
+
+        debug=False
+
+    )
