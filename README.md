@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="assets/hawk-waf-logo.png" alt="HAWK WAF" width="300">
+
 # HAWK WAF
+
+</div>
 
 **HAWK WAF** is a Python-based Web Application Firewall (WAF) and reverse proxy designed for authorized security testing and local cybersecurity labs.
 
