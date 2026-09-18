@@ -410,3 +410,22 @@ Security Monitoring
 
 Developed as an independent cybersecurity project and practical security engineering laboratory.
 
+
+## HAWK WAF Dashboard
+
+The HAWK WAF dashboard provides a visual interface for monitoring security activity, request statistics, blocked traffic, attack types, and WAF events.
+
+### Dashboard
+
+![HAWK WAF Dashboard 1](screenshots/dashboard-1.png)
+
+![HAWK WAF Dashboard 2](screenshots/dashboard-2.png)
+
+### Admin Panel
+
+The admin panel provides authenticated administrative access to HAWK WAF management and monitoring functionality.
+
+![HAWK WAF Admin Panel 1](screenshots/admin-panel-1.png)
+
+![HAWK WAF Admin Panel 2](screenshots/admin-panel-2.png)
+
